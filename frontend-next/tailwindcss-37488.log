@@ -1,0 +1,50 @@
+2026-05-04T13:06:34.657726Z  INFO tailwindcss_oxide::scanner: Provided sources:
+2026-05-04T13:06:34.657922Z  INFO tailwindcss_oxide::scanner: Source: PublicSourceEntry { base: "/workspace/projects/proof-of-engagement/frontend-next", pattern: "**/*", negated: false }
+2026-05-04T13:06:34.658142Z  INFO tailwindcss_oxide::scanner: Optimized sources:
+2026-05-04T13:06:34.658154Z  INFO tailwindcss_oxide::scanner: Source: Auto { base: "/workspace/projects/proof-of-engagement/frontend-next" }
+2026-05-04T13:06:34.660372Z  INFO discover_sources: tailwindcss_oxide::scanner: enter
+2026-05-04T13:06:34.660417Z  INFO discover_sources:walk_synchronous: tailwindcss_oxide::scanner: enter
+2026-05-04T13:06:34.662425Z  INFO discover_sources:walk_synchronous: tailwindcss_oxide::scanner: exit
+2026-05-04T13:06:34.668790Z  INFO tailwindcss_oxide::scanner: Reading "/workspace/projects/proof-of-engagement/frontend-next/README.md"
+2026-05-04T13:06:34.668876Z  INFO tailwindcss_oxide::scanner: Reading "/workspace/projects/proof-of-engagement/frontend-next/postcss.config.mjs"
+2026-05-04T13:06:34.668990Z  INFO tailwindcss_oxide::scanner: Reading "/workspace/projects/proof-of-engagement/frontend-next/public/next.svg"
+2026-05-04T13:06:34.669154Z  INFO tailwindcss_oxide::scanner: Reading "/workspace/projects/proof-of-engagement/frontend-next/public/globe.svg"
+2026-05-04T13:06:34.669233Z  INFO tailwindcss_oxide::scanner: Reading "/workspace/projects/proof-of-engagement/frontend-next/eslint.config.mjs"
+2026-05-04T13:06:34.669331Z  INFO tailwindcss_oxide::scanner: Reading "/workspace/projects/proof-of-engagement/frontend-next/public/vercel.svg"
+2026-05-04T13:06:34.669381Z  INFO tailwindcss_oxide::scanner: Reading "/workspace/projects/proof-of-engagement/frontend-next/public/file.svg"
+2026-05-04T13:06:34.669424Z  INFO tailwindcss_oxide::scanner: Reading "/workspace/projects/proof-of-engagement/frontend-next/components/Nav.tsx"
+2026-05-04T13:06:34.669463Z  INFO tailwindcss_oxide::scanner: Reading "/workspace/projects/proof-of-engagement/frontend-next/public/window.svg"
+2026-05-04T13:06:34.669511Z  INFO tailwindcss_oxide::scanner: Reading "/workspace/projects/proof-of-engagement/frontend-next/app/global-error.tsx"
+2026-05-04T13:06:34.669619Z  INFO tailwindcss_oxide::scanner: Reading "/workspace/projects/proof-of-engagement/frontend-next/app/not-found.tsx"
+2026-05-04T13:06:34.669680Z  INFO tailwindcss_oxide::scanner: Reading "/workspace/projects/proof-of-engagement/frontend-next/CLAUDE.md"
+2026-05-04T13:06:34.669681Z  INFO tailwindcss_oxide::scanner: Reading "/workspace/projects/proof-of-engagement/frontend-next/tsconfig.json"
+2026-05-04T13:06:34.669701Z  INFO tailwindcss_oxide::scanner: Reading "/workspace/projects/proof-of-engagement/frontend-next/app/layout.tsx"
+2026-05-04T13:06:34.669887Z  INFO tailwindcss_oxide::scanner: Reading "/workspace/projects/proof-of-engagement/frontend-next/app/docs/page.tsx"
+2026-05-04T13:06:34.669886Z  INFO tailwindcss_oxide::scanner: Reading "/workspace/projects/proof-of-engagement/frontend-next/app/page.tsx"
+2026-05-04T13:06:34.669999Z  INFO tailwindcss_oxide::scanner: Reading "/workspace/projects/proof-of-engagement/frontend-next/app/dashboard/page.tsx"
+2026-05-04T13:06:34.670151Z  INFO tailwindcss_oxide::scanner: Reading "/workspace/projects/proof-of-engagement/frontend-next/package.json"
+2026-05-04T13:06:34.670377Z  INFO tailwindcss_oxide::scanner: Reading "/workspace/projects/proof-of-engagement/frontend-next/next.config.ts"
+2026-05-04T13:06:34.670443Z  INFO tailwindcss_oxide::scanner: Reading "/workspace/projects/proof-of-engagement/frontend-next/AGENTS.md"
+2026-05-04T13:06:34.671285Z  INFO discover_sources: tailwindcss_oxide::scanner: exit
+2026-05-04T13:06:34.671327Z  INFO extract_candidates: tailwindcss_oxide::scanner: enter
+2026-05-04T13:06:34.671338Z  INFO extract_candidates:parse_all_blobs: tailwindcss_oxide::scanner: enter
+2026-05-04T13:06:34.671394Z  INFO extract_candidates:parse_all_blobs:extract: tailwindcss_oxide::scanner: enter
+2026-05-04T13:06:34.674209Z  INFO extract_candidates:parse_all_blobs:extract: tailwindcss_oxide::scanner: exit
+2026-05-04T13:06:34.674373Z  INFO extract_candidates:parse_all_blobs: tailwindcss_oxide::scanner: exit
+2026-05-04T13:06:34.674393Z  INFO extract_candidates:read_all_files: tailwindcss_oxide::scanner: enter
+2026-05-04T13:06:34.674402Z  INFO extract_candidates:read_all_files: tailwindcss_oxide::scanner: Reading 1 file(s)
+2026-05-04T13:06:34.674574Z  INFO extract_candidates:read_all_files: tailwindcss_oxide::scanner: Reading "/workspace/projects/proof-of-engagement/frontend-next/app/globals.css"
+2026-05-04T13:06:34.674620Z  INFO extract_candidates:read_all_files: tailwindcss_oxide::scanner: exit
+2026-05-04T13:06:34.674634Z  INFO extract_candidates:extract_css_variables: tailwindcss_oxide::scanner: enter
+2026-05-04T13:06:34.674643Z  INFO extract_candidates:extract_css_variables:extract: tailwindcss_oxide::scanner: enter
+2026-05-04T13:06:34.677267Z  INFO extract_candidates:extract_css_variables:extract: tailwindcss_oxide::scanner: exit
+2026-05-04T13:06:34.677358Z  INFO extract_candidates:extract_css_variables: tailwindcss_oxide::scanner: exit
+2026-05-04T13:06:34.677601Z  INFO extract_candidates: tailwindcss_oxide::scanner: exit
+2026-05-04T13:06:34.678129Z  INFO get_files: tailwindcss_oxide::scanner: enter
+2026-05-04T13:06:34.678148Z  INFO get_files:discover_sources: tailwindcss_oxide::scanner: enter
+2026-05-04T13:06:34.678156Z  INFO get_files:discover_sources: tailwindcss_oxide::scanner: exit
+2026-05-04T13:06:34.679968Z  INFO get_files: tailwindcss_oxide::scanner: exit
+2026-05-04T13:06:34.680171Z  INFO get_globs: tailwindcss_oxide::scanner: enter
+2026-05-04T13:06:34.680182Z  INFO get_globs:discover_sources: tailwindcss_oxide::scanner: enter
+2026-05-04T13:06:34.680189Z  INFO get_globs:discover_sources: tailwindcss_oxide::scanner: exit
+2026-05-04T13:06:34.682065Z  INFO get_globs: tailwindcss_oxide::scanner: exit

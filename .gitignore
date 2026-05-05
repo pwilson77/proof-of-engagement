@@ -1,0 +1,38 @@
+# Environment variables — never commit secrets
+.env
+.env.*
+.env.local
+.env.*.local
+
+# Node
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# Build outputs
+dist/
+build/
+out/
+.next/
+coverage/
+*.tsbuildinfo
+
+# Rust / Anchor build artifacts
+target/
+**/*.so
+**/*.so.bak
+
+# Solana keypairs and wallets (may contain private keys)
+*-keypair.json
+*.key.json
+test-ledger/
+.anchor/
+
+# macOS
+.DS_Store
+
+# Editor
+.vscode/settings.json
+*.pem
