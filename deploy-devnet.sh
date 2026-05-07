@@ -1,0 +1,153 @@
+#!/usr/bin/env bash
+# deploy-devnet.sh — Build, deploy, and initialise the PoE program on Solana devnet.
+#
+# Usage:
+#   bash deploy-devnet.sh            # full deploy + init + mint creation
+#   bash deploy-devnet.sh --skip-build   # deploy existing .so (skip anchor build)
+#
+# After this script completes:
+#   • Program is deployed to devnet at PoEe1hTQghtjuxrbR628JjpNPfLxEDN5GagwqUvJTGA
+#   • Config PDA is initialised with the test USDC mint
+#   • Test USDC mint address is written to .env.devnet (for frontend + seed script)
+#   • Deployer wallet has 10,000,000 test USDC tokens
+
+set -euo pipefail
+
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+CONTRACTS="$ROOT/contracts"
+PROGRAM_ID="PoEe1hTQghtjuxrbR628JjpNPfLxEDN5GagwqUvJTGA"
+PROGRAM_KEYPAIR="$CONTRACTS/${PROGRAM_ID}.json"
+PROGRAM_SO="$CONTRACTS/target/deploy/proof_of_engagement.so"
+DEVNET_RPC="https://api.devnet.solana.com"
+ENV_FILE="$ROOT/.env.devnet"
+
+# ── ANSI colours ──────────────────────────────────────────────────────────────
+BOLD="\033[1m"; GREEN="\033[32m"; CYAN="\033[36m"; YELLOW="\033[33m"; RED="\033[31m"; RESET="\033[0m"
+header() { echo -e "\n${BOLD}${CYAN}▶ $*${RESET}"; }
+ok()     { echo -e "  ${GREEN}✓${RESET} $*"; }
+warn()   { echo -e "  ${YELLOW}!${RESET} $*"; }
+die()    { echo -e "\n${RED}ERROR:${RESET} $*" >&2; exit 1; }
+
+echo -e "\n${BOLD}Proof-of-Engagement — devnet deploy${RESET}"
+echo "═══════════════════════════════════════════"
+
+# ── Pre-flight ────────────────────────────────────────────────────────────────
+command -v solana      &>/dev/null || die "solana CLI not found."
+command -v anchor      &>/dev/null || die "anchor CLI not found."
+command -v spl-token   &>/dev/null || die "spl-token CLI not found."
+command -v npx         &>/dev/null || die "npx not found."
+
+[[ -f "$PROGRAM_KEYPAIR" ]] || die "Program keypair not found at $PROGRAM_KEYPAIR"
+
+# ── Switch to devnet ──────────────────────────────────────────────────────────
+header "Configure devnet"
+solana config set --url devnet --keypair ~/.config/solana/id.json
+DEPLOYER=$(solana address)
+ok "deployer: $DEPLOYER"
+ok "RPC:      $DEVNET_RPC"
+
+# ── Fund deployer ─────────────────────────────────────────────────────────────
+header "Check balance"
+BALANCE=$(solana balance --url devnet | awk '{print $1}' | cut -d. -f1)
+ok "balance: ${BALANCE} SOL"
+# Program deploy needs ~2.5 SOL for a ~220KB .so
+if [[ "${BALANCE}" -lt 3 ]]; then
+  warn "Balance low — requesting airdrop…"
+  solana airdrop 2 --url devnet 2>&1 || true
+  sleep 4
+  solana airdrop 2 --url devnet 2>&1 || warn "Airdrop failed or rate-limited. Fund manually: https://faucet.solana.com (address: $DEPLOYER)"
+  sleep 3
+  BALANCE=$(solana balance --url devnet | awk '{print $1}' | cut -d. -f1)
+  if [[ "${BALANCE}" -lt 3 ]]; then
+    die "Still insufficient balance (${BALANCE} SOL). Fund the wallet manually at https://faucet.solana.com\n  Address: $DEPLOYER\n  Then rerun with: bash deploy-devnet.sh --skip-build"
+  fi
+  ok "balance: $(solana balance --url devnet)"
+fi
+
+# ── Build ─────────────────────────────────────────────────────────────────────
+if [[ "${1:-}" != "--skip-build" ]]; then
+  header "anchor build"
+  cd "$CONTRACTS"
+  anchor build
+  ok "build complete → $PROGRAM_SO"
+  cd "$ROOT"
+else
+  warn "--skip-build: using existing $PROGRAM_SO"
+  [[ -f "$PROGRAM_SO" ]] || die ".so not found at $PROGRAM_SO — run without --skip-build first."
+fi
+
+# ── Deploy ────────────────────────────────────────────────────────────────────
+header "Deploy program"
+solana program deploy \
+  --url devnet \
+  --program-id "$PROGRAM_KEYPAIR" \
+  "$PROGRAM_SO"
+ok "deployed: $PROGRAM_ID"
+
+# ── Create test USDC mint ─────────────────────────────────────────────────────
+header "Create test USDC mint"
+
+# Check if we already have a mint recorded
+if [[ -f "$ENV_FILE" ]]; then
+  EXISTING_MINT=$(grep "^NEXT_PUBLIC_USDC_MINT=" "$ENV_FILE" 2>/dev/null | cut -d= -f2 || true)
+  if [[ -n "$EXISTING_MINT" ]]; then
+    warn "Found existing mint in $ENV_FILE: $EXISTING_MINT"
+    read -r -p "  Reuse it? [Y/n] " ans
+    if [[ "${ans:-Y}" =~ ^[Yy]$ ]]; then
+      MINT="$EXISTING_MINT"
+      ok "reusing mint: $MINT"
+    fi
+  fi
+fi
+
+if [[ -z "${MINT:-}" ]]; then
+  MINT=$(spl-token -u devnet create-token --decimals 6 2>&1 | grep "Address:" | awk '{print $2}')
+  [[ -n "$MINT" ]] || die "Failed to create test token mint."
+  ok "created mint: $MINT"
+fi
+
+# Create ATA for deployer and mint supply
+spl-token -u devnet create-account "$MINT" &>/dev/null || warn "ATA already exists"
+spl-token -u devnet mint "$MINT" 100000000 &>/dev/null
+ok "minted 100,000,000 test USDC to deployer ATA"
+
+# ── Initialise Config PDA ─────────────────────────────────────────────────────
+header "Initialise Config PDA"
+cd "$ROOT/scripts"
+MINT="$MINT" npx tsx init-config.ts
+cd "$ROOT"
+
+# ── Write .env.devnet ─────────────────────────────────────────────────────────
+header "Write environment files"
+
+cat > "$ENV_FILE" <<EOF
+# Generated by deploy-devnet.sh — $(date -u +"%Y-%m-%d %H:%M UTC")
+NEXT_PUBLIC_RPC_URL=https://api.devnet.solana.com
+NEXT_PUBLIC_PROGRAM_ID=${PROGRAM_ID}
+NEXT_PUBLIC_USDC_MINT=${MINT}
+NEXT_PUBLIC_NETWORK=devnet
+EOF
+
+ok "wrote $ENV_FILE"
+
+# Also write frontend .env.local if it doesn't already point to devnet
+FRONTEND_ENV="$ROOT/frontend-next/.env.local"
+if [[ ! -f "$FRONTEND_ENV" ]]; then
+  cp "$ENV_FILE" "$FRONTEND_ENV"
+  ok "wrote $FRONTEND_ENV"
+else
+  warn "$FRONTEND_ENV already exists — not overwriting. Copy from $ENV_FILE if needed."
+fi
+
+# ── Summary ───────────────────────────────────────────────────────────────────
+echo ""
+echo -e "${BOLD}${GREEN}✅ Devnet deploy complete${RESET}"
+echo "  Program ID:  $PROGRAM_ID"
+echo "  Test mint:   $MINT"
+echo "  Deployer:    $DEPLOYER"
+echo ""
+echo "Next steps:"
+echo "  1. Seed demo campaigns:  MINT=$MINT npx tsx scripts/seed-devnet.ts"
+echo "  2. Run frontend:         cd frontend-next && cp ../.env.devnet .env.local && npm run dev"
+echo "  3. Vercel env vars:      add NEXT_PUBLIC_* from .env.devnet to your Vercel project"
+echo ""

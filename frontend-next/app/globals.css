@@ -1,19 +1,73 @@
+@import url("https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=JetBrains+Mono:wght@400;600&display=swap");
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #050707;
+  --foreground: #e9fbf6;
+  --panel: #0a0f0f;
+  --line: #133a34;
+  --line-soft: #0d2522;
+  --muted: #91aca5;
+  --accent: #08e0b0;
+  --accent-2: #2cf0c3;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-sans: "Space Grotesk", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+* {
+  border-color: var(--line-soft);
 }
 
 body {
-  background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-sans);
+  background:
+    radial-gradient(
+      circle at 15% -10%,
+      rgba(8, 224, 176, 0.22),
+      transparent 40%
+    ),
+    radial-gradient(
+      circle at 90% 10%,
+      rgba(16, 111, 93, 0.18),
+      transparent 45%
+    ),
+    linear-gradient(180deg, #040707 0%, #060a09 55%, #040706 100%);
+}
+
+.poe-grid-bg {
+  background-image:
+    linear-gradient(to right, rgba(19, 58, 52, 0.45) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(19, 58, 52, 0.45) 1px, transparent 1px);
+  background-size: 32px 32px;
+}
+
+.poe-panel {
+  background: linear-gradient(
+    180deg,
+    rgba(10, 16, 16, 0.9),
+    rgba(8, 12, 12, 0.86)
+  );
+  border: 1px solid var(--line);
+  box-shadow: inset 0 0 0 1px rgba(7, 160, 126, 0.06);
+}
+
+.poe-kicker {
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  font-size: 0.67rem;
+  color: var(--accent-2);
+}
+
+.scrollbar-none {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
 }

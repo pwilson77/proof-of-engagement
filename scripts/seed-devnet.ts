@@ -1,0 +1,320 @@
+/**
+ * seed-devnet.ts — Seed demo campaigns on Solana devnet (or any live cluster).
+ *
+ * Usage:
+ *   MINT=<token-mint-address> npx tsx seed-devnet.ts
+ *
+ * Funded actors are the same deterministic keypairs as localnet so dashboard
+ * screenshots look consistent.
+ *
+ * Campaigns seeded:
+ *   #1 — OPEN         Alice+Bob+Carol validators, Alpha executor  (no scores yet)
+ *   #2 — OPEN (RFQ)   Alice+Dave validators, bid window open
+ *   #3 — SETTLED      Bob+Carol validators,  Gamma executor  (Bob 9000, Carol 8500)
+ */
+
+import {
+  Connection,
+  Keypair,
+  PublicKey,
+  SystemProgram,
+  Transaction,
+  TransactionInstruction,
+} from "@solana/web3.js";
+import {
+  TOKEN_PROGRAM_ID,
+  getAssociatedTokenAddress,
+  createAssociatedTokenAccountIdempotentInstruction,
+} from "@solana/spl-token";
+import { sha256 } from "@noble/hashes/sha2.js";
+import { readFileSync } from "node:fs";
+import { homedir } from "node:os";
+import {
+  PoeClient,
+  findCampaignPda,
+  findValidatorSetPda,
+  findValidatorScorePda,
+  PROGRAM_ID,
+} from "@poe/sdk";
+
+// ── Deterministic keypairs (same seeds as seed-local.ts) ───────────────────
+function deterministicKp(label: string): Keypair {
+  const seed = new Uint8Array(32);
+  const enc = new TextEncoder().encode(label);
+  seed.set(enc.slice(0, 32));
+  return Keypair.fromSeed(seed);
+}
+
+const ALICE = deterministicKp("poe:validator:alice:000000000000");
+const BOB = deterministicKp("poe:validator:bob:0000000000000");
+const CAROL = deterministicKp("poe:validator:carol:00000000000");
+const DAVE = deterministicKp("poe:validator:dave:0000000000000");
+
+const ALPHA = deterministicKp("poe:executor:alpha:00000000000000");
+const GAMMA = deterministicKp("poe:executor:gamma:0000000000000000");
+
+function loadDefaultKeypair(): Keypair {
+  const raw = JSON.parse(
+    readFileSync(`${homedir()}/.config/solana/id.json`, "utf8"),
+  ) as number[];
+  return Keypair.fromSecretKey(Uint8Array.from(raw));
+}
+
+function encodeU64LE(n: bigint): Buffer {
+  const buf = Buffer.alloc(8);
+  buf.writeBigUInt64LE(n);
+  return buf;
+}
+
+function encodeU16LE(n: number): Buffer {
+  const buf = Buffer.alloc(2);
+  buf.writeUInt16LE(n);
+  return buf;
+}
+
+function disc(name: string): Buffer {
+  return Buffer.from(
+    sha256(new TextEncoder().encode(`global:${name}`)),
+  ).subarray(0, 8);
+}
+
+const DISC_SUBMIT_SCORE = disc("submit_validator_score");
+const DISC_SETTLE_SUCCESS = disc("settle_success");
+
+function sleep(ms: number) {
+  return new Promise((r) => setTimeout(r, ms));
+}
+
+function randomTaskRef(): Uint8Array {
+  const arr = new Uint8Array(32);
+  for (let i = 0; i < 32; i++) arr[i] = Math.floor(Math.random() * 256);
+  return arr;
+}
+
+async function airdropIfNeeded(
+  connection: Connection,
+  pk: PublicKey,
+  minLamports = 50_000_000, // 0.05 SOL
+) {
+  const bal = await connection.getBalance(pk);
+  if (bal < minLamports) {
+    console.log(`    airdrop 0.1 SOL → ${pk.toBase58().slice(0, 8)}…`);
+    const sig = await connection.requestAirdrop(pk, 100_000_000);
+    await connection.confirmTransaction(sig, "confirmed");
+    await sleep(1000);
+  }
+}
+
+async function submitValidatorScore(
+  connection: Connection,
+  signer: Keypair,
+  creator: PublicKey,
+  campaignId: bigint,
+  scoreBps: number,
+): Promise<string> {
+  const [campaignPda] = await findCampaignPda(creator, campaignId);
+  const [validatorSetPda] = await findValidatorSetPda(creator, campaignId);
+  const [scorePda] = await findValidatorScorePda(campaignPda, signer.publicKey);
+
+  const data = Buffer.concat([
+    DISC_SUBMIT_SCORE,
+    encodeU64LE(campaignId),
+    encodeU16LE(scoreBps),
+  ]);
+
+  const ix = new TransactionInstruction({
+    programId: PROGRAM_ID,
+    keys: [
+      { pubkey: signer.publicKey, isSigner: true, isWritable: true },
+      { pubkey: campaignPda, isSigner: false, isWritable: false },
+      { pubkey: validatorSetPda, isSigner: false, isWritable: false },
+      { pubkey: scorePda, isSigner: false, isWritable: true },
+      { pubkey: SystemProgram.programId, isSigner: false, isWritable: false },
+    ],
+    data,
+  });
+
+  const tx = new Transaction().add(ix);
+  const sig = await connection.sendTransaction(tx, [signer]);
+  await connection.confirmTransaction(sig, "confirmed");
+  return sig;
+}
+
+async function settleSuccess(
+  connection: Connection,
+  payer: Keypair,
+  creator: PublicKey,
+  campaignId: bigint,
+  usdcMint: PublicKey,
+  executorPk: PublicKey,
+  validators: Keypair[],
+): Promise<string> {
+  const [campaignPda] = await findCampaignPda(creator, campaignId);
+  const [validatorSetPda] = await findValidatorSetPda(creator, campaignId);
+
+  const escrowAta = await getAssociatedTokenAddress(
+    usdcMint,
+    campaignPda,
+    true,
+  );
+  const executorAta = await getAssociatedTokenAddress(usdcMint, executorPk);
+
+  const scorePdaKeys = await Promise.all(
+    validators.map(async (v) => {
+      const [pda] = await findValidatorScorePda(campaignPda, v.publicKey);
+      return { pubkey: pda, isSigner: false, isWritable: false };
+    }),
+  );
+
+  const data = Buffer.concat([disc("settle_success"), encodeU64LE(campaignId)]);
+
+  const ix = new TransactionInstruction({
+    programId: PROGRAM_ID,
+    keys: [
+      { pubkey: payer.publicKey, isSigner: true, isWritable: true },
+      { pubkey: campaignPda, isSigner: false, isWritable: true },
+      { pubkey: validatorSetPda, isSigner: false, isWritable: false },
+      { pubkey: escrowAta, isSigner: false, isWritable: true },
+      { pubkey: executorAta, isSigner: false, isWritable: true },
+      { pubkey: TOKEN_PROGRAM_ID, isSigner: false, isWritable: false },
+      ...scorePdaKeys,
+    ],
+    data,
+  });
+
+  const tx = new Transaction().add(ix);
+  const sig = await connection.sendTransaction(tx, [payer]);
+  await connection.confirmTransaction(sig, "confirmed");
+  return sig;
+}
+
+// ── Main ──────────────────────────────────────────────────────────────────────
+async function main() {
+  const mintArg = process.env.MINT;
+  if (!mintArg) throw new Error("Set MINT=<token-mint-pubkey> env variable.");
+
+  const connection = new Connection(
+    "https://api.devnet.solana.com",
+    "confirmed",
+  );
+  const payer = loadDefaultKeypair();
+  const usdcMint = new PublicKey(mintArg);
+
+  console.log("\n▶ seed-devnet");
+  console.log("  payer:", payer.publicKey.toBase58());
+  console.log("  mint: ", usdcMint.toBase58());
+
+  const sdk = new PoeClient({ connection, payer });
+
+  // ── Fund actors ─────────────────────────────────────────────────────────────
+  console.log("\n▶ Fund validator/executor keypairs…");
+  for (const kp of [ALICE, BOB, CAROL, DAVE, ALPHA, GAMMA]) {
+    await airdropIfNeeded(connection, kp.publicKey);
+  }
+
+  // ── Create ATAs & fund tokens ───────────────────────────────────────────────
+  console.log("\n▶ Create token accounts…");
+  const ataTxKeys = [payer.publicKey, ALPHA.publicKey, GAMMA.publicKey];
+  const createAtaIxs = await Promise.all(
+    ataTxKeys.map((owner) =>
+      getAssociatedTokenAddress(usdcMint, owner).then((ata) =>
+        createAssociatedTokenAccountIdempotentInstruction(
+          payer.publicKey,
+          ata,
+          owner,
+          usdcMint,
+        ),
+      ),
+    ),
+  );
+
+  const ataTx = new Transaction().add(...createAtaIxs);
+  const ataSig = await connection.sendTransaction(ataTx, [payer]);
+  await connection.confirmTransaction(ataSig, "confirmed");
+  console.log("  ✓ ATAs ready");
+
+  const now = Math.floor(Date.now() / 1000);
+
+  // ── Campaign #1 — OPEN, direct mode ────────────────────────────────────────
+  console.log("\n▶ Campaign #1 — OPEN direct");
+  await sdk.createCampaign({
+    campaignId: 1n,
+    executor: ALPHA.publicKey,
+    validators: [ALICE.publicKey, BOB.publicKey, CAROL.publicKey],
+    thresholdBps: 7000,
+    amount: 500_000n,
+    taskRef: randomTaskRef(),
+    deadlineUnix: BigInt(now + 86400 * 7),
+  });
+  console.log("  ✓ campaign #1 open");
+
+  // ── Campaign #2 — OPEN, RFQ mode ───────────────────────────────────────────
+  console.log("\n▶ Campaign #2 — OPEN RFQ");
+  await sdk.createCampaignRfq({
+    campaignId: 2n,
+    amount: 1_000_000n,
+    taskRef: randomTaskRef(),
+    validators: [ALICE.publicKey, DAVE.publicKey],
+    thresholdBps: 6000,
+    deadlineUnix: BigInt(now + 86400 * 14),
+    rfqDeadlineUnix: BigInt(now + 86400 * 3),
+  });
+  console.log("  ✓ campaign #2 open (RFQ)");
+
+  // ── Campaign #3 — SETTLED_SUCCESS ──────────────────────────────────────────
+  console.log("\n▶ Campaign #3 — settle success");
+  const [cp3] = await findCampaignPda(payer.publicKey, 3n);
+  await sdk.createCampaign({
+    campaignId: 3n,
+    executor: GAMMA.publicKey,
+    validators: [BOB.publicKey, CAROL.publicKey],
+    thresholdBps: 6000,
+    amount: 250_000n,
+    taskRef: randomTaskRef(),
+    deadlineUnix: BigInt(now + 86400 * 7),
+  });
+
+  await sleep(1000);
+
+  // Bob and Carol both score above threshold
+  await submitValidatorScore(connection, BOB, payer.publicKey, 3n, 9000);
+  console.log("  ✓ Bob scored 9000");
+  await submitValidatorScore(connection, CAROL, payer.publicKey, 3n, 8500);
+  console.log("  ✓ Carol scored 8500");
+
+  // Create executor ATA if not already done
+  const gammaAta = await getAssociatedTokenAddress(usdcMint, GAMMA.publicKey);
+  const ensureGammaAtaTx = new Transaction().add(
+    createAssociatedTokenAccountIdempotentInstruction(
+      payer.publicKey,
+      gammaAta,
+      GAMMA.publicKey,
+      usdcMint,
+    ),
+  );
+  const ensureSig = await connection.sendTransaction(ensureGammaAtaTx, [payer]);
+  await connection.confirmTransaction(ensureSig, "confirmed");
+
+  await settleSuccess(
+    connection,
+    payer,
+    payer.publicKey,
+    3n,
+    usdcMint,
+    GAMMA.publicKey,
+    [BOB, CAROL],
+  );
+  console.log("  ✓ campaign #3 settled success");
+
+  // ── Summary ─────────────────────────────────────────────────────────────────
+  console.log("\n✅ Devnet seed complete");
+  console.log("  #1 — OPEN (direct)         campaignId=1");
+  console.log("  #2 — OPEN (RFQ)            campaignId=2");
+  console.log("  #3 — SETTLED_SUCCESS       campaignId=3");
+  console.log("\nOpen the dashboard, set RPC to https://api.devnet.solana.com");
+}
+
+main().catch((e) => {
+  console.error("seed-devnet failed:", e);
+  process.exit(1);
+});

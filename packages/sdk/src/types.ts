@@ -1,5 +1,5 @@
 import { PublicKey } from "@solana/web3.js";
-import type { CampaignStatus } from "./constants.js";
+import type { BidStatus, CampaignMode, CampaignStatus } from "./constants.js";
 
 /** Deserialized on-chain Campaign account. */
 export interface CampaignAccount {
@@ -17,6 +17,22 @@ export interface CampaignAccount {
   status: CampaignStatus;
   createdAtUnix: bigint;
   bump: number;
+  mode: CampaignMode;
+  rfqDeadlineUnix: bigint;
+  acceptedBidId: bigint;
+}
+
+/** Deserialized on-chain Bid account. */
+export interface BidAccount {
+  campaign: PublicKey;
+  bidId: bigint;
+  bidder: PublicKey;
+  amount: bigint;
+  capabilitiesHash: Uint8Array;
+  etaUnix: bigint;
+  status: BidStatus;
+  createdAtUnix: bigint;
+  bump: number;
 }
 
 /** Deserialized on-chain ValidatorScore account. */
@@ -29,7 +45,11 @@ export interface ValidatorScoreAccount {
 }
 
 /** Human-readable campaign status string. */
-export type CampaignStatusLabel = "open" | "settled_success" | "settled_refund";
+export type CampaignStatusLabel =
+  | "open"
+  | "settled_success"
+  | "settled_refund"
+  | "rfq_expired";
 
 /** Campaign status query result. */
 export interface CampaignStatusResult {
@@ -39,7 +59,7 @@ export interface CampaignStatusResult {
   scores: ValidatorScoreAccount[];
 }
 
-/** Parameters for creating a campaign. */
+/** Parameters for creating a direct campaign. */
 export interface CreateCampaignParams {
   /** Monotonic u64 campaign id chosen by the creator. */
   campaignId: bigint;
@@ -55,6 +75,43 @@ export interface CreateCampaignParams {
   thresholdBps: number;
   /** Unix timestamp deadline (must be in the future). */
   deadlineUnix: bigint;
+}
+
+/** Parameters for creating an RFQ campaign. */
+export interface CreateCampaignRfqParams {
+  campaignId: bigint;
+  amount: bigint;
+  taskRef: Uint8Array;
+  validators: PublicKey[];
+  thresholdBps: number;
+  deadlineUnix: bigint;
+  /** Must be in the future and < deadlineUnix. */
+  rfqDeadlineUnix: bigint;
+}
+
+/** Parameters for submitting a bid. */
+export interface SubmitBidParams {
+  creator: PublicKey;
+  campaignId: bigint;
+  /** Client-chosen nonce, used as part of bid PDA seed. */
+  bidId: bigint;
+  amount: bigint;
+  capabilitiesHash: Uint8Array;
+  etaUnix: bigint;
+}
+
+/** Parameters for withdrawing a bid. */
+export interface WithdrawBidParams {
+  creator: PublicKey;
+  campaignId: bigint;
+  bidId: bigint;
+}
+
+/** Parameters for accepting a bid. */
+export interface AcceptBidParams {
+  campaignId: bigint;
+  bidder: PublicKey;
+  bidId: bigint;
 }
 
 /** Receipt returned after a successful transaction. */

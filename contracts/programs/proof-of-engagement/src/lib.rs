@@ -9,7 +9,15 @@ const MAX_VALIDATORS: usize = 16;
 const STATUS_OPEN: u8 = 0;
 const STATUS_SETTLED_SUCCESS: u8 = 1;
 const STATUS_SETTLED_REFUND: u8 = 2;
+const STATUS_RFQ_EXPIRED: u8 = 3;
 const BPS_DENOMINATOR: u16 = 10_000;
+
+const CAMPAIGN_MODE_DIRECT: u8 = 0;
+const CAMPAIGN_MODE_RFQ: u8 = 1;
+
+const BID_STATUS_OPEN: u8 = 0;
+const BID_STATUS_WITHDRAWN: u8 = 1;
+const BID_STATUS_ACCEPTED: u8 = 2;
 
 #[program]
 pub mod proof_of_engagement {
@@ -84,10 +92,151 @@ pub mod proof_of_engagement {
         campaign.validator_count = args.validator_count;
         campaign.threshold_bps = args.threshold_bps;
         campaign.deadline_unix = args.deadline_unix;
+        campaign.mode = CAMPAIGN_MODE_DIRECT;
+        campaign.rfq_deadline_unix = 0;
+        campaign.accepted_bid_id = 0;
         campaign.status = STATUS_OPEN;
         campaign.created_at_unix = now;
         campaign.bump = ctx.bumps.campaign;
 
+        Ok(())
+    }
+
+    pub fn create_campaign_rfq(
+        ctx: Context<CreateCampaignRfq>,
+        args: CreateCampaignRfqArgs,
+    ) -> Result<()> {
+        require!(args.amount > 0, PoeError::InvalidAmount);
+        require!(args.validator_count > 0, PoeError::InvalidValidatorCount);
+        require!(args.threshold_bps > 0, PoeError::InvalidThreshold);
+        require!(args.threshold_bps <= BPS_DENOMINATOR, PoeError::InvalidThreshold);
+
+        let now = Clock::get()?.unix_timestamp;
+        require!(args.deadline_unix > now, PoeError::InvalidDeadline);
+        require!(args.rfq_deadline_unix > now, PoeError::InvalidDeadline);
+        require!(args.rfq_deadline_unix < args.deadline_unix, PoeError::RfqDeadlineAfterExecution);
+
+        let config = &ctx.accounts.config;
+        require!(ctx.accounts.mint.key() == config.usdc_mint, PoeError::InvalidMint);
+
+        let validator_set = &ctx.accounts.validator_set;
+        require!(validator_set.creator == ctx.accounts.creator.key(), PoeError::InvalidValidatorSet);
+        require!(validator_set.campaign_id == args.campaign_id, PoeError::InvalidValidatorSet);
+        require!(validator_set.validator_count == args.validator_count, PoeError::InvalidValidatorCount);
+        require!(validator_set.validator_set_hash == args.validator_set_hash, PoeError::InvalidValidatorSetHash);
+
+        token::transfer(
+            CpiContext::new(
+                ctx.accounts.token_program.to_account_info(),
+                Transfer {
+                    from: ctx.accounts.creator_token_account.to_account_info(),
+                    to: ctx.accounts.escrow_token_account.to_account_info(),
+                    authority: ctx.accounts.creator.to_account_info(),
+                },
+            ),
+            args.amount,
+        )?;
+
+        let campaign = &mut ctx.accounts.campaign;
+        campaign.campaign_id = args.campaign_id;
+        campaign.creator = ctx.accounts.creator.key();
+        campaign.executor = Pubkey::default();
+        campaign.mint = ctx.accounts.mint.key();
+        campaign.escrow_token_account = ctx.accounts.escrow_token_account.key();
+        campaign.amount = args.amount;
+        campaign.task_ref = args.task_ref;
+        campaign.validator_set_hash = args.validator_set_hash;
+        campaign.validator_count = args.validator_count;
+        campaign.threshold_bps = args.threshold_bps;
+        campaign.deadline_unix = args.deadline_unix;
+        campaign.mode = CAMPAIGN_MODE_RFQ;
+        campaign.rfq_deadline_unix = args.rfq_deadline_unix;
+        campaign.accepted_bid_id = 0;
+        campaign.status = STATUS_OPEN;
+        campaign.created_at_unix = now;
+        campaign.bump = ctx.bumps.campaign;
+
+        Ok(())
+    }
+
+    pub fn submit_bid(
+        ctx: Context<SubmitBid>,
+        _campaign_id: u64,
+        bid_id: u64,
+        amount: u64,
+        capabilities_hash: [u8; 32],
+        eta_unix: i64,
+    ) -> Result<()> {
+        let now = Clock::get()?.unix_timestamp;
+        let campaign = &ctx.accounts.campaign;
+
+        require!(campaign.mode == CAMPAIGN_MODE_RFQ, PoeError::NotRfqMode);
+        require!(campaign.status == STATUS_OPEN, PoeError::CampaignNotOpen);
+        require!(now < campaign.rfq_deadline_unix, PoeError::RfqWindowClosed);
+        require!(campaign.executor == Pubkey::default(), PoeError::BidAlreadyAccepted);
+        require!(amount > 0, PoeError::InvalidAmount);
+
+        let bid = &mut ctx.accounts.bid;
+        bid.campaign = campaign.key();
+        bid.bid_id = bid_id;
+        bid.bidder = ctx.accounts.bidder.key();
+        bid.amount = amount;
+        bid.capabilities_hash = capabilities_hash;
+        bid.eta_unix = eta_unix;
+        bid.status = BID_STATUS_OPEN;
+        bid.created_at_unix = now;
+        bid.bump = ctx.bumps.bid;
+
+        Ok(())
+    }
+
+    pub fn withdraw_bid(
+        ctx: Context<WithdrawBid>,
+        _campaign_id: u64,
+        _bid_id: u64,
+    ) -> Result<()> {
+        let campaign = &ctx.accounts.campaign;
+        require!(campaign.executor == Pubkey::default(), PoeError::BidAlreadyAccepted);
+        require!(ctx.accounts.bid.status == BID_STATUS_OPEN, PoeError::BidNotWithdrawable);
+
+        ctx.accounts.bid.status = BID_STATUS_WITHDRAWN;
+        Ok(())
+    }
+
+    pub fn accept_bid(
+        ctx: Context<AcceptBid>,
+        _campaign_id: u64,
+        _bid_id: u64,
+    ) -> Result<()> {
+        let campaign = &mut ctx.accounts.campaign;
+        require!(campaign.mode == CAMPAIGN_MODE_RFQ, PoeError::NotRfqMode);
+        require!(campaign.status == STATUS_OPEN, PoeError::CampaignNotOpen);
+        require!(campaign.executor == Pubkey::default(), PoeError::BidAlreadyAccepted);
+
+        let bid = &mut ctx.accounts.bid;
+        require!(bid.status == BID_STATUS_OPEN, PoeError::BidNotWithdrawable);
+        require!(bid.campaign == campaign.key(), PoeError::InvalidBidCampaign);
+
+        campaign.executor = bid.bidder;
+        campaign.accepted_bid_id = bid.bid_id;
+        bid.status = BID_STATUS_ACCEPTED;
+
+        Ok(())
+    }
+
+    pub fn expire_rfq(
+        ctx: Context<ExpireRfq>,
+        _campaign_id: u64,
+    ) -> Result<()> {
+        let now = Clock::get()?.unix_timestamp;
+        let campaign = &mut ctx.accounts.campaign;
+
+        require!(campaign.mode == CAMPAIGN_MODE_RFQ, PoeError::NotRfqMode);
+        require!(campaign.status == STATUS_OPEN, PoeError::CampaignNotOpen);
+        require!(campaign.executor == Pubkey::default(), PoeError::BidAlreadyAccepted);
+        require!(now > campaign.rfq_deadline_unix, PoeError::RfqWindowNotExpired);
+
+        campaign.status = STATUS_RFQ_EXPIRED;
         Ok(())
     }
 
@@ -128,6 +277,12 @@ pub mod proof_of_engagement {
         let campaign_key = ctx.accounts.campaign.key();
 
         require!(ctx.accounts.campaign.status == STATUS_OPEN, PoeError::CampaignNotOpen);
+        if ctx.accounts.campaign.mode == CAMPAIGN_MODE_RFQ {
+            require!(
+                ctx.accounts.campaign.executor != Pubkey::default(),
+                PoeError::ExecutorNotSet,
+            );
+        }
 
         let mut score_inputs: Vec<ScoreInput> = Vec::new();
 
@@ -206,6 +361,39 @@ pub mod proof_of_engagement {
 
         Ok(())
     }
+
+    // -------------------------------------------------------------------------
+    // MagicBlock Ephemeral Rollup — fast validator scoring path
+    // -------------------------------------------------------------------------
+
+    /// Delegate the Campaign PDA to the MagicBlock ephemeral rollup.
+    /// After delegation, validators submit scores via the ER endpoint
+    /// (sub-10ms latency) instead of base Solana (~400ms).
+    /// The campaign must be OPEN and executor must already be set.
+    pub fn delegate_campaign(ctx: Context<DelegateCampaign>, _campaign_id: u64) -> Result<()> {
+        let campaign = &ctx.accounts.campaign;
+        require!(campaign.status == STATUS_OPEN, PoeError::CampaignNotOpen);
+        if campaign.mode == CAMPAIGN_MODE_RFQ {
+            require!(
+                campaign.executor != Pubkey::default(),
+                PoeError::ExecutorNotSet,
+            );
+        }
+        Ok(())
+    }
+
+    /// Commit Campaign PDA state from ER back to base layer and undelegate.
+    /// Must be called before `settle_success` / `settle_timeout_refund`.
+    pub fn undelegate_campaign(ctx: Context<UndelegateCampaign>, _campaign_id: u64) -> Result<()> {
+        // The #[commit] macro handles state sync + undelegation automatically.
+        // We just guard against accidentally undelegating a settled campaign.
+        require!(
+            ctx.accounts.campaign.status == STATUS_OPEN
+                || ctx.accounts.campaign.status == STATUS_RFQ_EXPIRED,
+            PoeError::CampaignNotOpen,
+        );
+        Ok(())
+    }
 }
 
 #[derive(AnchorSerialize, AnchorDeserialize, Clone)]
@@ -218,6 +406,18 @@ pub struct CreateCampaignArgs {
     pub validator_count: u8,
     pub threshold_bps: u16,
     pub deadline_unix: i64,
+}
+
+#[derive(AnchorSerialize, AnchorDeserialize, Clone)]
+pub struct CreateCampaignRfqArgs {
+    pub campaign_id: u64,
+    pub amount: u64,
+    pub task_ref: [u8; 32],
+    pub validator_set_hash: [u8; 32],
+    pub validator_count: u8,
+    pub threshold_bps: u16,
+    pub deadline_unix: i64,
+    pub rfq_deadline_unix: i64,
 }
 
 #[derive(Accounts)]
@@ -372,6 +572,155 @@ pub struct SettleTimeoutRefund<'info> {
     pub token_program: Program<'info, Token>,
 }
 
+// ---------------------------------------------------------------------------
+// RFQ context structs
+// ---------------------------------------------------------------------------
+
+#[derive(Accounts)]
+#[instruction(args: CreateCampaignRfqArgs)]
+pub struct CreateCampaignRfq<'info> {
+    #[account(mut)]
+    pub creator: Signer<'info>,
+    #[account(seeds = [b"config"], bump = config.bump)]
+    pub config: Account<'info, Config>,
+    pub mint: Account<'info, Mint>,
+    #[account(
+        mut,
+        constraint = creator_token_account.owner == creator.key(),
+        constraint = creator_token_account.mint == mint.key(),
+    )]
+    pub creator_token_account: Account<'info, TokenAccount>,
+    #[account(
+        seeds = [b"validator_set", creator.key().as_ref(), &args.campaign_id.to_le_bytes()],
+        bump = validator_set.bump,
+    )]
+    pub validator_set: Account<'info, ValidatorSet>,
+    #[account(
+        init,
+        payer = creator,
+        space = Campaign::LEN,
+        seeds = [b"campaign", creator.key().as_ref(), &args.campaign_id.to_le_bytes()],
+        bump
+    )]
+    pub campaign: Account<'info, Campaign>,
+    #[account(
+        init,
+        payer = creator,
+        token::mint = mint,
+        token::authority = campaign,
+    )]
+    pub escrow_token_account: Account<'info, TokenAccount>,
+    pub token_program: Program<'info, Token>,
+    pub system_program: Program<'info, System>,
+    pub rent: Sysvar<'info, Rent>,
+}
+
+#[derive(Accounts)]
+#[instruction(campaign_id: u64, bid_id: u64)]
+pub struct SubmitBid<'info> {
+    #[account(mut)]
+    pub bidder: Signer<'info>,
+    #[account(
+        seeds = [b"campaign", campaign.creator.as_ref(), &campaign_id.to_le_bytes()],
+        bump = campaign.bump,
+    )]
+    pub campaign: Account<'info, Campaign>,
+    #[account(
+        init,
+        payer = bidder,
+        space = Bid::LEN,
+        seeds = [b"bid", campaign.key().as_ref(), bidder.key().as_ref(), &bid_id.to_le_bytes()],
+        bump
+    )]
+    pub bid: Account<'info, Bid>,
+    pub system_program: Program<'info, System>,
+}
+
+#[derive(Accounts)]
+#[instruction(campaign_id: u64, bid_id: u64)]
+pub struct WithdrawBid<'info> {
+    #[account(mut)]
+    pub bidder: Signer<'info>,
+    #[account(
+        seeds = [b"campaign", campaign.creator.as_ref(), &campaign_id.to_le_bytes()],
+        bump = campaign.bump,
+    )]
+    pub campaign: Account<'info, Campaign>,
+    #[account(
+        mut,
+        seeds = [b"bid", campaign.key().as_ref(), bidder.key().as_ref(), &bid_id.to_le_bytes()],
+        bump = bid.bump,
+        constraint = bid.bidder == bidder.key(),
+    )]
+    pub bid: Account<'info, Bid>,
+}
+
+#[derive(Accounts)]
+#[instruction(campaign_id: u64, bid_id: u64)]
+pub struct AcceptBid<'info> {
+    #[account(mut)]
+    pub creator: Signer<'info>,
+    #[account(
+        mut,
+        seeds = [b"campaign", campaign.creator.as_ref(), &campaign_id.to_le_bytes()],
+        bump = campaign.bump,
+        constraint = campaign.creator == creator.key(),
+    )]
+    pub campaign: Account<'info, Campaign>,
+    #[account(
+        mut,
+        seeds = [b"bid", campaign.key().as_ref(), bid.bidder.as_ref(), &bid_id.to_le_bytes()],
+        bump = bid.bump,
+    )]
+    pub bid: Account<'info, Bid>,
+}
+
+#[derive(Accounts)]
+#[instruction(campaign_id: u64)]
+pub struct ExpireRfq<'info> {
+    #[account(mut)]
+    pub caller: Signer<'info>,
+    #[account(
+        mut,
+        seeds = [b"campaign", campaign.creator.as_ref(), &campaign_id.to_le_bytes()],
+        bump = campaign.bump,
+    )]
+    pub campaign: Account<'info, Campaign>,
+}
+
+// ---------------------------------------------------------------------------
+// MagicBlock Ephemeral Rollup account contexts
+// ---------------------------------------------------------------------------
+
+#[derive(Accounts)]
+#[instruction(campaign_id: u64)]
+pub struct DelegateCampaign<'info> {
+    /// Campaign creator (authority) — must sign to authorize delegation.
+    #[account(mut)]
+    pub payer: Signer<'info>,
+    /// Campaign PDA that will be delegated to the ER via the TypeScript SDK.
+    #[account(
+        mut,
+        seeds = [b"campaign", payer.key().as_ref(), &campaign_id.to_le_bytes()],
+        bump,
+    )]
+    pub campaign: Account<'info, Campaign>,
+}
+
+#[derive(Accounts)]
+#[instruction(campaign_id: u64)]
+pub struct UndelegateCampaign<'info> {
+    #[account(mut)]
+    pub payer: Signer<'info>,
+    /// Campaign PDA being un-delegated / committed back from ER.
+    #[account(
+        mut,
+        seeds = [b"campaign", payer.key().as_ref(), &campaign_id.to_le_bytes()],
+        bump,
+    )]
+    pub campaign: Account<'info, Campaign>,
+}
+
 #[account]
 pub struct Config {
     pub authority: Pubkey,
@@ -413,10 +762,32 @@ pub struct Campaign {
     pub status: u8,
     pub created_at_unix: i64,
     pub bump: u8,
+    // RFQ extension fields (mode=0 for direct campaigns, set to defaults)
+    pub mode: u8,
+    pub rfq_deadline_unix: i64,
+    pub accepted_bid_id: u64,
 }
 
 impl Campaign {
-    pub const LEN: usize = 8 + 8 + (32 * 4) + 8 + 32 + 32 + 1 + 2 + 8 + 1 + 8 + 1;
+    // base(237) + mode(1) + rfq_deadline_unix(8) + accepted_bid_id(8)
+    pub const LEN: usize = 8 + 8 + (32 * 4) + 8 + 32 + 32 + 1 + 2 + 8 + 1 + 8 + 1 + 1 + 8 + 8;
+}
+
+#[account]
+pub struct Bid {
+    pub campaign: Pubkey,
+    pub bid_id: u64,
+    pub bidder: Pubkey,
+    pub amount: u64,
+    pub capabilities_hash: [u8; 32],
+    pub eta_unix: i64,
+    pub status: u8,
+    pub created_at_unix: i64,
+    pub bump: u8,
+}
+
+impl Bid {
+    pub const LEN: usize = 8 + 32 + 8 + 32 + 8 + 32 + 8 + 1 + 8 + 1;
 }
 
 #[account]
@@ -478,6 +849,23 @@ pub enum PoeError {
     MathOverflow,
     #[msg("duplicate validator score")]
     DuplicateValidatorScore,
+    // RFQ errors
+    #[msg("campaign is not in RFQ mode")]
+    NotRfqMode,
+    #[msg("RFQ bidding window is closed")]
+    RfqWindowClosed,
+    #[msg("a bid has already been accepted")]
+    BidAlreadyAccepted,
+    #[msg("bid is not in a withdrawable state")]
+    BidNotWithdrawable,
+    #[msg("bid belongs to a different campaign")]
+    InvalidBidCampaign,
+    #[msg("executor not set — accept a bid first")]
+    ExecutorNotSet,
+    #[msg("RFQ window has not expired yet")]
+    RfqWindowNotExpired,
+    #[msg("RFQ deadline must be before execution deadline")]
+    RfqDeadlineAfterExecution,
 }
 
 fn compute_average_score_bps(scores: &[ScoreInput]) -> std::result::Result<u16, PoeError> {
@@ -512,6 +900,10 @@ fn ensure_timeout_refund_allowed(
     now_unix: i64,
     deadline_unix: i64,
 ) -> std::result::Result<(), PoeError> {
+    if status == STATUS_RFQ_EXPIRED {
+        // RFQ already expired — refund is always allowed regardless of deadline.
+        return Ok(());
+    }
     if status != STATUS_OPEN {
         return Err(PoeError::CampaignNotOpen);
     }

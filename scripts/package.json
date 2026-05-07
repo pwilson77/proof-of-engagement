@@ -6,7 +6,9 @@
   "scripts": {
     "demo": "tsx demo.ts",
     "manual:live": "tsx manual-live.ts",
-    "seed:local": "tsx seed-local.ts"
+    "seed:local": "tsx seed-local.ts",
+    "init:config": "tsx init-config.ts",
+    "seed:devnet": "tsx seed-devnet.ts"
   },
   "dependencies": {
     "@poe/consensus-orchestrator": "file:../agents/consensus",

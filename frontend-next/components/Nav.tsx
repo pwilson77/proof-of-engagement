@@ -2,29 +2,32 @@ import NavEnvDropdown from "./NavEnvDropdown";
 
 export default function Nav() {
   return (
-    <header className="border-b border-zinc-200 bg-white">
+    <header className="border-b border-[#133a34] bg-[#060a09]/90 backdrop-blur-sm">
       <div className="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between gap-4">
-        <a href="/" className="text-base font-bold tracking-tight text-zinc-900">
-          Proof-of-<span className="text-teal-700">Engagement</span>
+        <a
+          href="/"
+          className="text-base font-bold tracking-tight text-white uppercase"
+        >
+          Proof-of-<span className="text-[#1beabf]">Engagement</span>
         </a>
         <nav className="flex items-center gap-5">
           <a
             href="/"
-            className="text-sm font-semibold text-zinc-500 hover:text-teal-700"
+            className="text-sm font-semibold text-[#8db1aa] hover:text-[#2af1c3]"
           >
             Home
           </a>
           <a
             href="/docs"
-            className="text-sm font-semibold text-zinc-500 hover:text-teal-700"
+            className="text-sm font-semibold text-[#8db1aa] hover:text-[#2af1c3]"
           >
             Docs
           </a>
           <a
             href="/dashboard"
-            className="text-sm font-semibold text-zinc-500 hover:text-teal-700"
+            className="text-sm font-semibold text-[#8db1aa] hover:text-[#2af1c3]"
           >
-            Dashboard
+            Campaigns
           </a>
           <NavEnvDropdown />
         </nav>

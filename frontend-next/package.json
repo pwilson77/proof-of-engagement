@@ -14,6 +14,7 @@
     "@solana/spl-token": "^0.4.14",
     "@solana/web3.js": "^1.98.4",
     "buffer": "^6.0.3",
+    "mermaid": "^11.14.0",
     "next": "^14.2.35",
     "react": "^18.3.1",
     "react-dom": "^18.3.1"

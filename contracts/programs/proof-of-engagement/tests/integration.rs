@@ -24,7 +24,7 @@ use spl_token::state::{AccountState, Mint};
 use proof_of_engagement::{
     entry,
     instruction as poe_ix,
-    CreateCampaignArgs, ID as POE_ID,
+    CreateCampaignArgs, CreateCampaignRfqArgs, ID as POE_ID,
 };
 
 // ── helpers ──────────────────────────────────────────────────────────────────
@@ -960,4 +960,731 @@ async fn test_non_validator_score_rejected() {
         .await;
 
     assert!(result.is_err(), "non-validator must not be able to submit a score");
+}
+
+// ── RFQ: full happy path ──────────────────────────────────────────────────────
+
+#[tokio::test]
+async fn test_rfq_full_happy_path() {
+    let mut ctx = program_test().start_with_context().await;
+
+    let authority = Keypair::new();
+    let creator = Keypair::new();
+    let bidder = Keypair::new(); // becomes executor after bid accepted
+    let validator_a = Keypair::new();
+    let validator_b = Keypair::new();
+    let caller = Keypair::new();
+
+    for kp in [&authority, &creator, &bidder, &validator_a, &validator_b, &caller] {
+        let tx = Transaction::new_signed_with_payer(
+            &[system_instruction::transfer(&ctx.payer.pubkey(), &kp.pubkey(), 2_000_000_000)],
+            Some(&ctx.payer.pubkey()),
+            &[&ctx.payer],
+            ctx.last_blockhash,
+        );
+        ctx.banks_client.process_transaction(tx).await.unwrap();
+    }
+
+    let usdc_mint = create_mint(&mut ctx, &authority, 6).await;
+    let creator_ta = create_token_account(&mut ctx, usdc_mint, creator.pubkey()).await;
+    mint_to(&mut ctx, usdc_mint, creator_ta.pubkey(), &authority, 1_000_000).await;
+    let bidder_ta = create_token_account(&mut ctx, usdc_mint, bidder.pubkey()).await;
+
+    let config_pda = initialize_config(&mut ctx, &authority, usdc_mint).await;
+
+    let campaign_id: u64 = 100;
+    let validators = vec![validator_a.pubkey(), validator_b.pubkey()];
+    let vs_hash = canonical_validator_hash(&validators);
+    let vs_pda = create_validator_set(&mut ctx, &creator, campaign_id, validators).await;
+
+    let escrow_kp = Keypair::new();
+    let (campaign_pda, _) = Pubkey::find_program_address(
+        &[b"campaign", creator.pubkey().as_ref(), &campaign_id.to_le_bytes()],
+        &POE_ID,
+    );
+
+    let clock = ctx.banks_client.get_sysvar::<solana_sdk::sysvar::clock::Clock>().await.unwrap();
+    let now = clock.unix_timestamp;
+    let rfq_deadline = now + 60;
+    let deadline = now + 3_600;
+
+    let args = CreateCampaignRfqArgs {
+        campaign_id,
+        amount: 500_000,
+        task_ref: [0u8; 32],
+        validator_set_hash: vs_hash,
+        validator_count: 2,
+        threshold_bps: 6_000,
+        deadline_unix: deadline,
+        rfq_deadline_unix: rfq_deadline,
+    };
+
+    let create_ix = Instruction {
+        program_id: POE_ID,
+        accounts: proof_of_engagement::accounts::CreateCampaignRfq {
+            creator: creator.pubkey(),
+            config: config_pda,
+            mint: usdc_mint,
+            creator_token_account: creator_ta.pubkey(),
+            validator_set: vs_pda,
+            campaign: campaign_pda,
+            escrow_token_account: escrow_kp.pubkey(),
+            token_program: spl_token::ID,
+            system_program: solana_sdk::system_program::ID,
+            rent: solana_sdk::sysvar::rent::ID,
+        }
+        .to_account_metas(None),
+        data: poe_ix::CreateCampaignRfq { args }.data(),
+    };
+
+    ctx.banks_client
+        .process_transaction(Transaction::new_signed_with_payer(
+            &[create_ix],
+            Some(&ctx.payer.pubkey()),
+            &[&ctx.payer, &creator, &escrow_kp],
+            ctx.last_blockhash,
+        ))
+        .await
+        .unwrap();
+
+    // Submit a bid
+    let bid_id: u64 = 1;
+    let (bid_pda, _) = Pubkey::find_program_address(
+        &[b"bid", campaign_pda.as_ref(), bidder.pubkey().as_ref(), &bid_id.to_le_bytes()],
+        &POE_ID,
+    );
+
+    let submit_bid_ix = Instruction {
+        program_id: POE_ID,
+        accounts: proof_of_engagement::accounts::SubmitBid {
+            bidder: bidder.pubkey(),
+            campaign: campaign_pda,
+            bid: bid_pda,
+            system_program: solana_sdk::system_program::ID,
+        }
+        .to_account_metas(None),
+        data: poe_ix::SubmitBid {
+            _campaign_id: campaign_id,
+            bid_id,
+            amount: 400_000,
+            capabilities_hash: [0u8; 32],
+            eta_unix: now + 1_000,
+        }
+        .data(),
+    };
+
+    ctx.banks_client
+        .process_transaction(Transaction::new_signed_with_payer(
+            &[submit_bid_ix],
+            Some(&ctx.payer.pubkey()),
+            &[&ctx.payer, &bidder],
+            ctx.last_blockhash,
+        ))
+        .await
+        .unwrap();
+
+    // Accept the bid — sets executor = bidder
+    let accept_ix = Instruction {
+        program_id: POE_ID,
+        accounts: proof_of_engagement::accounts::AcceptBid {
+            creator: creator.pubkey(),
+            campaign: campaign_pda,
+            bid: bid_pda,
+        }
+        .to_account_metas(None),
+        data: poe_ix::AcceptBid {
+            _campaign_id: campaign_id,
+            _bid_id: bid_id,
+        }
+        .data(),
+    };
+
+    ctx.banks_client
+        .process_transaction(Transaction::new_signed_with_payer(
+            &[accept_ix],
+            Some(&ctx.payer.pubkey()),
+            &[&ctx.payer, &creator],
+            ctx.last_blockhash,
+        ))
+        .await
+        .unwrap();
+
+    // Submit validator scores
+    let score_pdas: Vec<Pubkey> = [&validator_a, &validator_b]
+        .iter()
+        .map(|v| {
+            Pubkey::find_program_address(
+                &[b"score", campaign_pda.as_ref(), v.pubkey().as_ref()],
+                &POE_ID,
+            )
+            .0
+        })
+        .collect();
+
+    for (validator, score_pda) in [(&validator_a, score_pdas[0]), (&validator_b, score_pdas[1])] {
+        let score_ix = Instruction {
+            program_id: POE_ID,
+            accounts: proof_of_engagement::accounts::SubmitValidatorScore {
+                validator: validator.pubkey(),
+                campaign: campaign_pda,
+                validator_set: vs_pda,
+                validator_score: score_pda,
+                system_program: solana_sdk::system_program::ID,
+            }
+            .to_account_metas(None),
+            data: poe_ix::SubmitValidatorScore {
+                _campaign_id: campaign_id,
+                score_bps: 8_000,
+            }
+            .data(),
+        };
+        ctx.last_blockhash = ctx.banks_client.get_latest_blockhash().await.unwrap();
+        ctx.banks_client
+            .process_transaction(Transaction::new_signed_with_payer(
+                &[score_ix],
+                Some(&ctx.payer.pubkey()),
+                &[&ctx.payer, validator],
+                ctx.last_blockhash,
+            ))
+            .await
+            .unwrap();
+    }
+
+    // settle_success
+    let mut settle_metas = proof_of_engagement::accounts::SettleSuccess {
+        caller: caller.pubkey(),
+        campaign: campaign_pda,
+        escrow_token_account: escrow_kp.pubkey(),
+        executor_token_account: bidder_ta.pubkey(),
+        token_program: spl_token::ID,
+    }
+    .to_account_metas(None);
+    for pda in &score_pdas {
+        settle_metas.push(solana_sdk::instruction::AccountMeta::new_readonly(*pda, false));
+    }
+
+    let settle_ix = Instruction {
+        program_id: POE_ID,
+        accounts: settle_metas,
+        data: poe_ix::SettleSuccess { _campaign_id: campaign_id }.data(),
+    };
+
+    ctx.last_blockhash = ctx.banks_client.get_latest_blockhash().await.unwrap();
+    ctx.banks_client
+        .process_transaction(Transaction::new_signed_with_payer(
+            &[settle_ix],
+            Some(&ctx.payer.pubkey()),
+            &[&ctx.payer, &caller],
+            ctx.last_blockhash,
+        ))
+        .await
+        .unwrap();
+
+    let bidder_ta_state = spl_token::state::Account::unpack(
+        &ctx.banks_client.get_account(bidder_ta.pubkey()).await.unwrap().unwrap().data,
+    )
+    .unwrap();
+    assert_eq!(bidder_ta_state.amount, 500_000, "bidder/executor should receive escrowed tokens");
+}
+
+// ── RFQ: expire then refund ───────────────────────────────────────────────────
+
+#[tokio::test]
+async fn test_rfq_expire_and_refund() {
+    let mut ctx = program_test().start_with_context().await;
+
+    let authority = Keypair::new();
+    let creator = Keypair::new();
+
+    for kp in [&authority, &creator] {
+        let tx = Transaction::new_signed_with_payer(
+            &[system_instruction::transfer(&ctx.payer.pubkey(), &kp.pubkey(), 2_000_000_000)],
+            Some(&ctx.payer.pubkey()),
+            &[&ctx.payer],
+            ctx.last_blockhash,
+        );
+        ctx.banks_client.process_transaction(tx).await.unwrap();
+    }
+
+    let usdc_mint = create_mint(&mut ctx, &authority, 6).await;
+    let creator_ta = create_token_account(&mut ctx, usdc_mint, creator.pubkey()).await;
+    mint_to(&mut ctx, usdc_mint, creator_ta.pubkey(), &authority, 300_000).await;
+    let config_pda = initialize_config(&mut ctx, &authority, usdc_mint).await;
+
+    let campaign_id: u64 = 200;
+    let validators = vec![Pubkey::new_unique()];
+    let vs_hash = canonical_validator_hash(&validators);
+    let vs_pda = create_validator_set(&mut ctx, &creator, campaign_id, validators).await;
+
+    let escrow_kp = Keypair::new();
+    let (campaign_pda, _) = Pubkey::find_program_address(
+        &[b"campaign", creator.pubkey().as_ref(), &campaign_id.to_le_bytes()],
+        &POE_ID,
+    );
+
+    let clock = ctx.banks_client.get_sysvar::<solana_sdk::sysvar::clock::Clock>().await.unwrap();
+    let now = clock.unix_timestamp;
+    // Short RFQ window so we can warp past it
+    let rfq_deadline = now + 10;
+    let deadline = now + 3_600;
+
+    let args = CreateCampaignRfqArgs {
+        campaign_id,
+        amount: 300_000,
+        task_ref: [0u8; 32],
+        validator_set_hash: vs_hash,
+        validator_count: 1,
+        threshold_bps: 5_000,
+        deadline_unix: deadline,
+        rfq_deadline_unix: rfq_deadline,
+    };
+
+    ctx.banks_client
+        .process_transaction(Transaction::new_signed_with_payer(
+            &[Instruction {
+                program_id: POE_ID,
+                accounts: proof_of_engagement::accounts::CreateCampaignRfq {
+                    creator: creator.pubkey(),
+                    config: config_pda,
+                    mint: usdc_mint,
+                    creator_token_account: creator_ta.pubkey(),
+                    validator_set: vs_pda,
+                    campaign: campaign_pda,
+                    escrow_token_account: escrow_kp.pubkey(),
+                    token_program: spl_token::ID,
+                    system_program: solana_sdk::system_program::ID,
+                    rent: solana_sdk::sysvar::rent::ID,
+                }
+                .to_account_metas(None),
+                data: poe_ix::CreateCampaignRfq { args }.data(),
+            }],
+            Some(&ctx.payer.pubkey()),
+            &[&ctx.payer, &creator, &escrow_kp],
+            ctx.last_blockhash,
+        ))
+        .await
+        .unwrap();
+
+    // Warp past rfq_deadline (10 s). Use the same large-warp pattern as the
+    // existing timeout refund test to ensure unix_timestamp advances enough.
+    ctx.warp_to_slot(10_000).unwrap();
+    let pre_warp = ctx.banks_client.get_sysvar::<solana_sdk::sysvar::clock::Clock>().await.unwrap();
+    ctx.warp_to_slot(pre_warp.slot + 100_000).unwrap();
+    ctx.last_blockhash = ctx.banks_client.get_latest_blockhash().await.unwrap();
+
+    // expire_rfq — sets campaign status to STATUS_RFQ_EXPIRED
+    ctx.banks_client
+        .process_transaction(Transaction::new_signed_with_payer(
+            &[Instruction {
+                program_id: POE_ID,
+                accounts: proof_of_engagement::accounts::ExpireRfq {
+                    caller: ctx.payer.pubkey(),
+                    campaign: campaign_pda,
+                }
+                .to_account_metas(None),
+                data: poe_ix::ExpireRfq { _campaign_id: campaign_id }.data(),
+            }],
+            Some(&ctx.payer.pubkey()),
+            &[&ctx.payer],
+            ctx.last_blockhash,
+        ))
+        .await
+        .unwrap();
+
+    ctx.last_blockhash = ctx.banks_client.get_latest_blockhash().await.unwrap();
+
+    let before = spl_token::state::Account::unpack(
+        &ctx.banks_client.get_account(creator_ta.pubkey()).await.unwrap().unwrap().data,
+    )
+    .unwrap()
+    .amount;
+
+    let refund_ix = Instruction {
+        program_id: POE_ID,
+        accounts: proof_of_engagement::accounts::SettleTimeoutRefund {
+            caller: ctx.payer.pubkey(),
+            campaign: campaign_pda,
+            escrow_token_account: escrow_kp.pubkey(),
+            creator_refund_token_account: creator_ta.pubkey(),
+            token_program: spl_token::ID,
+        }
+        .to_account_metas(None),
+        data: poe_ix::SettleTimeoutRefund { _campaign_id: campaign_id }.data(),
+    };
+
+    ctx.banks_client
+        .process_transaction(Transaction::new_signed_with_payer(
+            &[refund_ix],
+            Some(&ctx.payer.pubkey()),
+            &[&ctx.payer],
+            ctx.last_blockhash,
+        ))
+        .await
+        .unwrap();
+
+    let after = spl_token::state::Account::unpack(
+        &ctx.banks_client.get_account(creator_ta.pubkey()).await.unwrap().unwrap().data,
+    )
+    .unwrap()
+    .amount;
+
+    assert_eq!(after - before, 300_000, "creator should be fully refunded after RFQ expiry");
+}
+
+// ── RFQ: withdraw bid, then accept fails ─────────────────────────────────────
+
+#[tokio::test]
+async fn test_rfq_withdraw_bid() {
+    let mut ctx = program_test().start_with_context().await;
+
+    let authority = Keypair::new();
+    let creator = Keypair::new();
+    let bidder = Keypair::new();
+
+    for kp in [&authority, &creator, &bidder] {
+        let tx = Transaction::new_signed_with_payer(
+            &[system_instruction::transfer(&ctx.payer.pubkey(), &kp.pubkey(), 2_000_000_000)],
+            Some(&ctx.payer.pubkey()),
+            &[&ctx.payer],
+            ctx.last_blockhash,
+        );
+        ctx.banks_client.process_transaction(tx).await.unwrap();
+    }
+
+    let usdc_mint = create_mint(&mut ctx, &authority, 6).await;
+    let creator_ta = create_token_account(&mut ctx, usdc_mint, creator.pubkey()).await;
+    mint_to(&mut ctx, usdc_mint, creator_ta.pubkey(), &authority, 300_000).await;
+    let config_pda = initialize_config(&mut ctx, &authority, usdc_mint).await;
+
+    let campaign_id: u64 = 300;
+    let validators = vec![Pubkey::new_unique()];
+    let vs_hash = canonical_validator_hash(&validators);
+    let vs_pda = create_validator_set(&mut ctx, &creator, campaign_id, validators).await;
+
+    let escrow_kp = Keypair::new();
+    let (campaign_pda, _) = Pubkey::find_program_address(
+        &[b"campaign", creator.pubkey().as_ref(), &campaign_id.to_le_bytes()],
+        &POE_ID,
+    );
+
+    let clock = ctx.banks_client.get_sysvar::<solana_sdk::sysvar::clock::Clock>().await.unwrap();
+    let now = clock.unix_timestamp;
+
+    let args = CreateCampaignRfqArgs {
+        campaign_id,
+        amount: 200_000,
+        task_ref: [0u8; 32],
+        validator_set_hash: vs_hash,
+        validator_count: 1,
+        threshold_bps: 5_000,
+        deadline_unix: now + 3_600,
+        rfq_deadline_unix: now + 1_800,
+    };
+
+    ctx.banks_client
+        .process_transaction(Transaction::new_signed_with_payer(
+            &[Instruction {
+                program_id: POE_ID,
+                accounts: proof_of_engagement::accounts::CreateCampaignRfq {
+                    creator: creator.pubkey(),
+                    config: config_pda,
+                    mint: usdc_mint,
+                    creator_token_account: creator_ta.pubkey(),
+                    validator_set: vs_pda,
+                    campaign: campaign_pda,
+                    escrow_token_account: escrow_kp.pubkey(),
+                    token_program: spl_token::ID,
+                    system_program: solana_sdk::system_program::ID,
+                    rent: solana_sdk::sysvar::rent::ID,
+                }
+                .to_account_metas(None),
+                data: poe_ix::CreateCampaignRfq { args }.data(),
+            }],
+            Some(&ctx.payer.pubkey()),
+            &[&ctx.payer, &creator, &escrow_kp],
+            ctx.last_blockhash,
+        ))
+        .await
+        .unwrap();
+
+    let bid_id: u64 = 1;
+    let (bid_pda, _) = Pubkey::find_program_address(
+        &[b"bid", campaign_pda.as_ref(), bidder.pubkey().as_ref(), &bid_id.to_le_bytes()],
+        &POE_ID,
+    );
+
+    // Submit bid
+    ctx.banks_client
+        .process_transaction(Transaction::new_signed_with_payer(
+            &[Instruction {
+                program_id: POE_ID,
+                accounts: proof_of_engagement::accounts::SubmitBid {
+                    bidder: bidder.pubkey(),
+                    campaign: campaign_pda,
+                    bid: bid_pda,
+                    system_program: solana_sdk::system_program::ID,
+                }
+                .to_account_metas(None),
+                data: poe_ix::SubmitBid {
+                    _campaign_id: campaign_id,
+                    bid_id,
+                    amount: 150_000,
+                    capabilities_hash: [0u8; 32],
+                    eta_unix: now + 500,
+                }
+                .data(),
+            }],
+            Some(&ctx.payer.pubkey()),
+            &[&ctx.payer, &bidder],
+            ctx.last_blockhash,
+        ))
+        .await
+        .unwrap();
+
+    // Withdraw bid
+    ctx.last_blockhash = ctx.banks_client.get_latest_blockhash().await.unwrap();
+    ctx.banks_client
+        .process_transaction(Transaction::new_signed_with_payer(
+            &[Instruction {
+                program_id: POE_ID,
+                accounts: proof_of_engagement::accounts::WithdrawBid {
+                    bidder: bidder.pubkey(),
+                    campaign: campaign_pda,
+                    bid: bid_pda,
+                }
+                .to_account_metas(None),
+                data: poe_ix::WithdrawBid {
+                    _campaign_id: campaign_id,
+                    _bid_id: bid_id,
+                }
+                .data(),
+            }],
+            Some(&ctx.payer.pubkey()),
+            &[&ctx.payer, &bidder],
+            ctx.last_blockhash,
+        ))
+        .await
+        .unwrap();
+
+    // Attempt to accept the withdrawn bid — must fail
+    ctx.last_blockhash = ctx.banks_client.get_latest_blockhash().await.unwrap();
+    let result = ctx
+        .banks_client
+        .process_transaction(Transaction::new_signed_with_payer(
+            &[Instruction {
+                program_id: POE_ID,
+                accounts: proof_of_engagement::accounts::AcceptBid {
+                    creator: creator.pubkey(),
+                    campaign: campaign_pda,
+                    bid: bid_pda,
+                }
+                .to_account_metas(None),
+                data: poe_ix::AcceptBid {
+                    _campaign_id: campaign_id,
+                    _bid_id: bid_id,
+                }
+                .data(),
+            }],
+            Some(&ctx.payer.pubkey()),
+            &[&ctx.payer, &creator],
+            ctx.last_blockhash,
+        ))
+        .await;
+
+    assert!(result.is_err(), "accepting a withdrawn bid must fail");
+}
+
+// ── ER guard: delegate happy path ─────────────────────────────────────────────
+
+#[tokio::test]
+async fn test_delegate_campaign_guard() {
+    let mut ctx = program_test().start_with_context().await;
+
+    let authority = Keypair::new();
+    let creator = Keypair::new();
+    let executor = Keypair::new();
+
+    for kp in [&authority, &creator, &executor] {
+        let tx = Transaction::new_signed_with_payer(
+            &[system_instruction::transfer(&ctx.payer.pubkey(), &kp.pubkey(), 2_000_000_000)],
+            Some(&ctx.payer.pubkey()),
+            &[&ctx.payer],
+            ctx.last_blockhash,
+        );
+        ctx.banks_client.process_transaction(tx).await.unwrap();
+    }
+
+    let usdc_mint = create_mint(&mut ctx, &authority, 6).await;
+    let creator_ta = create_token_account(&mut ctx, usdc_mint, creator.pubkey()).await;
+    mint_to(&mut ctx, usdc_mint, creator_ta.pubkey(), &authority, 500_000).await;
+    let config_pda = initialize_config(&mut ctx, &authority, usdc_mint).await;
+
+    let campaign_id: u64 = 400;
+    let validators = vec![Pubkey::new_unique()];
+    let vs_hash = canonical_validator_hash(&validators);
+    let vs_pda = create_validator_set(&mut ctx, &creator, campaign_id, validators).await;
+
+    let escrow_kp = Keypair::new();
+    let (campaign_pda, _) = Pubkey::find_program_address(
+        &[b"campaign", creator.pubkey().as_ref(), &campaign_id.to_le_bytes()],
+        &POE_ID,
+    );
+
+    let clock = ctx.banks_client.get_sysvar::<solana_sdk::sysvar::clock::Clock>().await.unwrap();
+    let deadline = clock.unix_timestamp + 3_600;
+
+    let args = CreateCampaignArgs {
+        campaign_id,
+        executor: executor.pubkey(),
+        amount: 100_000,
+        task_ref: [0u8; 32],
+        validator_set_hash: vs_hash,
+        validator_count: 1,
+        threshold_bps: 5_000,
+        deadline_unix: deadline,
+    };
+
+    ctx.banks_client
+        .process_transaction(Transaction::new_signed_with_payer(
+            &[Instruction {
+                program_id: POE_ID,
+                accounts: proof_of_engagement::accounts::CreateCampaign {
+                    creator: creator.pubkey(),
+                    config: config_pda,
+                    mint: usdc_mint,
+                    creator_token_account: creator_ta.pubkey(),
+                    validator_set: vs_pda,
+                    campaign: campaign_pda,
+                    escrow_token_account: escrow_kp.pubkey(),
+                    token_program: spl_token::ID,
+                    system_program: solana_sdk::system_program::ID,
+                    rent: solana_sdk::sysvar::rent::ID,
+                }
+                .to_account_metas(None),
+                data: poe_ix::CreateCampaign { args }.data(),
+            }],
+            Some(&ctx.payer.pubkey()),
+            &[&ctx.payer, &creator, &escrow_kp],
+            ctx.last_blockhash,
+        ))
+        .await
+        .unwrap();
+
+    // delegate_campaign guard — campaign is OPEN, must succeed
+    ctx.last_blockhash = ctx.banks_client.get_latest_blockhash().await.unwrap();
+    ctx.banks_client
+        .process_transaction(Transaction::new_signed_with_payer(
+            &[Instruction {
+                program_id: POE_ID,
+                accounts: proof_of_engagement::accounts::DelegateCampaign {
+                    payer: creator.pubkey(),
+                    campaign: campaign_pda,
+                }
+                .to_account_metas(None),
+                data: poe_ix::DelegateCampaign { _campaign_id: campaign_id }.data(),
+            }],
+            Some(&ctx.payer.pubkey()),
+            &[&ctx.payer, &creator],
+            ctx.last_blockhash,
+        ))
+        .await
+        .unwrap();
+}
+
+// ── ER guard: delegate RFQ without executor fails ─────────────────────────────
+
+#[tokio::test]
+async fn test_delegate_campaign_rfq_no_executor_fails() {
+    let mut ctx = program_test().start_with_context().await;
+
+    let authority = Keypair::new();
+    let creator = Keypair::new();
+
+    for kp in [&authority, &creator] {
+        let tx = Transaction::new_signed_with_payer(
+            &[system_instruction::transfer(&ctx.payer.pubkey(), &kp.pubkey(), 2_000_000_000)],
+            Some(&ctx.payer.pubkey()),
+            &[&ctx.payer],
+            ctx.last_blockhash,
+        );
+        ctx.banks_client.process_transaction(tx).await.unwrap();
+    }
+
+    let usdc_mint = create_mint(&mut ctx, &authority, 6).await;
+    let creator_ta = create_token_account(&mut ctx, usdc_mint, creator.pubkey()).await;
+    mint_to(&mut ctx, usdc_mint, creator_ta.pubkey(), &authority, 200_000).await;
+    let config_pda = initialize_config(&mut ctx, &authority, usdc_mint).await;
+
+    let campaign_id: u64 = 500;
+    let validators = vec![Pubkey::new_unique()];
+    let vs_hash = canonical_validator_hash(&validators);
+    let vs_pda = create_validator_set(&mut ctx, &creator, campaign_id, validators).await;
+
+    let escrow_kp = Keypair::new();
+    let (campaign_pda, _) = Pubkey::find_program_address(
+        &[b"campaign", creator.pubkey().as_ref(), &campaign_id.to_le_bytes()],
+        &POE_ID,
+    );
+
+    let clock = ctx.banks_client.get_sysvar::<solana_sdk::sysvar::clock::Clock>().await.unwrap();
+    let now = clock.unix_timestamp;
+
+    let args = CreateCampaignRfqArgs {
+        campaign_id,
+        amount: 150_000,
+        task_ref: [0u8; 32],
+        validator_set_hash: vs_hash,
+        validator_count: 1,
+        threshold_bps: 5_000,
+        deadline_unix: now + 3_600,
+        rfq_deadline_unix: now + 1_800,
+    };
+
+    ctx.banks_client
+        .process_transaction(Transaction::new_signed_with_payer(
+            &[Instruction {
+                program_id: POE_ID,
+                accounts: proof_of_engagement::accounts::CreateCampaignRfq {
+                    creator: creator.pubkey(),
+                    config: config_pda,
+                    mint: usdc_mint,
+                    creator_token_account: creator_ta.pubkey(),
+                    validator_set: vs_pda,
+                    campaign: campaign_pda,
+                    escrow_token_account: escrow_kp.pubkey(),
+                    token_program: spl_token::ID,
+                    system_program: solana_sdk::system_program::ID,
+                    rent: solana_sdk::sysvar::rent::ID,
+                }
+                .to_account_metas(None),
+                data: poe_ix::CreateCampaignRfq { args }.data(),
+            }],
+            Some(&ctx.payer.pubkey()),
+            &[&ctx.payer, &creator, &escrow_kp],
+            ctx.last_blockhash,
+        ))
+        .await
+        .unwrap();
+
+    // delegate_campaign on an RFQ campaign with no accepted bid (executor = default) — must fail
+    ctx.last_blockhash = ctx.banks_client.get_latest_blockhash().await.unwrap();
+    let result = ctx
+        .banks_client
+        .process_transaction(Transaction::new_signed_with_payer(
+            &[Instruction {
+                program_id: POE_ID,
+                accounts: proof_of_engagement::accounts::DelegateCampaign {
+                    payer: creator.pubkey(),
+                    campaign: campaign_pda,
+                }
+                .to_account_metas(None),
+                data: poe_ix::DelegateCampaign { _campaign_id: campaign_id }.data(),
+            }],
+            Some(&ctx.payer.pubkey()),
+            &[&ctx.payer, &creator],
+            ctx.last_blockhash,
+        ))
+        .await;
+
+    assert!(result.is_err(), "delegating RFQ campaign without accepted bid must fail");
 }

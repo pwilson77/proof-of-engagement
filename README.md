@@ -1,121 +1,180 @@
 # Proof-of-Engagement
 
-> Trustless on-chain settlement for autonomous agent social tasks — built for the SWARM hackathon by Colosseum.
+> Trustless on-chain settlement for autonomous agent task execution on Solana.
 
 ## Problem
 
-There's no trustless way to verify that an AI agent actually completed a social task (tweet, reshare, reply, upvote) and settle payment accordingly. Today this requires manual review or centralized oracles, which breaks composability with fully autonomous agent pipelines.
+There's no trustless way to verify that an AI agent actually completed a task (social post, code review, commerce action) and settle payment accordingly. Today this requires manual review or centralized oracles, which breaks composability with fully autonomous agent pipelines.
 
 ## Solution
 
-Proof-of-Engagement lets anyone post a social campaign with an on-chain USDC escrow. Executor agents claim tasks, sign attestations, and validator agents independently fetch and score the engagement via MCP tools. When a quorum of validators agrees the threshold was met, the escrow releases automatically.
+Proof-of-Engagement lets Creator Agents post campaigns with an on-chain escrow. Executor Agents perform the work; Validator Agents independently fetch and score the evidence via pluggable adapters. When a quorum agrees the threshold was met, the escrow releases automatically.
 
+```mermaid
+flowchart TD
+    CA["🧑‍💻 Creator Agent\ncreate_campaign / create_campaign_rfq"]
+    EA["⚙️ Executor Agent\nperforms the task"]
+    CP(["Campaign PDA\non-chain escrow · USDC locked"])
+    SP(["Score PDAs\nper-validator accounts"])
+
+    CA -->|"escrow + rules"| CP
+    CA -->|"direct or RFQ"| EA
+    EA -->|"task ref"| SP
+
+    subgraph ER ["⚡ MagicBlock Ephemeral Rollup  ~50 ms/slot"]
+        VA["Validator A\nsubmitValidatorScoreEr"]
+        VB["Validator B\nsubmitValidatorScoreEr"]
+        VC["Validator C\nsubmitValidatorScoreEr"]
+    end
+
+    SP --> VA & VB & VC
+    CP -->|"delegate_campaign"| ER
+    ER -->|"undelegate → commit state"| CP
+
+    VA & VB & VC --> CO["ConsensusOrchestrator\naggregates · checks threshold BPS"]
+
+    CO -->|"avg ≥ threshold"| SS["✅ settle_success\nescrow → executor"]
+    CO -->|"deadline passed"| TR["🔄 settle_timeout_refund\nescrow → creator"]
 ```
-Campaign Creator → Anchor program (escrow + rules)
-      ↓
-Executor Agent  → completes social task → signs attestation
-      ↓
-Validator Agents (3+) → MCP fetch → consensus score
-      ↓
-Threshold met?  → auto-release USDC to executor
-                → timeout? → refund creator
-```
+
+> **Campaigns are always agent-initiated.** The dashboard is a read-only observer — no human creates or manages campaigns through the UI.
+
+## Campaign Modes
+
+| Mode       | Executor selected…   | Use case                               |
+| ---------- | -------------------- | -------------------------------------- |
+| **Direct** | At campaign creation | Known executor agent, zero overhead    |
+| **RFQ**    | Via open bid window  | Competitive routing, unknown executors |
+
+In RFQ mode, Executor Agents submit bids during the `rfqDeadlineUnix` window. The Creator Agent accepts exactly one bid on-chain before execution begins.
 
 ## How It Differs
 
 | Feature       | Traditional bounty boards | PoE                           |
 | ------------- | ------------------------- | ----------------------------- |
-| Verification  | Manual / centralized      | Agent consensus via MCP       |
+| Verification  | Manual / centralized      | Agent consensus via adapters  |
 | Settlement    | Human approval            | Threshold-gated, automatic    |
-| Composability | API-only                  | MCP tools, agent-native       |
+| Composability | API-only                  | SDK + MCP tools, agent-native |
 | Trust model   | Platform custody          | Anchor program, non-custodial |
+| Executor      | Fixed at posting          | Direct or RFQ (bid-based)     |
 
 ## Stack
 
-- **Solana / Anchor** — campaign escrow program, score submission, USDC release
-- **MCP adapters** — social data fetchers (Twitter/X, Farcaster, etc.) exposed as MCP tools
-- **TypeScript agents** — executor agent (task + attestation) and validator agent (MCP fetch + scoring)
-- **SPL USDC** — payment token
-- **Next.js dashboard** — campaign creation, live proof ribbon, payout status
+- **Solana / Anchor** — campaign escrow program, Bid PDAs, score submission, USDC release
+- **MagicBlock Ephemeral Rollups** — optional fast lane for validator scoring; `delegate_campaign` / `undelegate_campaign` guard instructions keep trust on Solana while ER accelerates round-trips
+- **`@poe/sdk`** — `PoeClient` with `delegateCampaign`, `undelegateCampaign`, `submitValidatorScoreEr` and `ER_ENDPOINTS` constants
+- **`@poe/validator-adapter`** — generic interface for evidence adapters (social, code, commerce, …)
+- **`@poe/mcp-adapter-x`** — X (Twitter) post engagement adapter
+- **`@poe/github-pr-adapter`** — GitHub PR review adapter
+- **TypeScript agents** — executor (task + attestation) and validator (fetch + scoring)
+- **SPL token** — configurable payment token (USDC by default)
+- **Next.js dashboard** — read-only observer: campaign list, validator scores, RFQ state
 
 ## Project Structure
 
 ```
 proof-of-engagement/
-├── contracts/          # Anchor program (Rust)
-│   └── programs/
-│       └── proof-of-engagement/
+├── contracts/
+│   └── programs/proof-of-engagement/  # Anchor program (Rust)
+│       └── src/lib.rs                 # Direct + RFQ instructions, Bid PDAs
+├── packages/
+│   ├── sdk/                           # @poe/sdk — PoeClient, ConsensusOrchestrator
+│   └── validator-adapter/             # @poe/validator-adapter — adapter interface
 ├── agents/
-│   ├── executor/       # Claims tasks, signs attestations
-│   └── validator/      # Fetches proofs, submits scores
-├── mcp-adapters/       # MCP tool wrappers for social APIs
-├── sdk/                # TypeScript SDK for campaign creation
-├── ui/                 # Next.js campaign dashboard
-└── tests/              # Integration tests
+│   ├── executor/                      # Claims tasks, signs attestations
+│   └── validator/                     # Fetches evidence, submits scores
+├── mcp-adapters/
+│   ├── x/                             # @poe/mcp-adapter-x (Twitter/X)
+│   └── github-pr/                     # @poe/github-pr-adapter
+├── frontend-next/                     # Next.js read-only dashboard
+└── scripts/                           # Local-net seed + demo scripts
 ```
-
-## SWARM Judging Alignment
-
-| Criterion           | Coverage                                          |
-| ------------------- | ------------------------------------------------- |
-| Novel use of agents | Validator quorum consensus is fully agent-driven  |
-| On-chain settlement | Anchor program, non-custodial USDC escrow         |
-| MCP integration     | Social proof fetched via MCP tools                |
-| Real-world utility  | Solves real pain for growth teams using AI agents |
 
 ## Getting Started
 
-### Quick start (no Solana validator needed)
-
-Runs a full agent interaction — executor attestation, 3 validator scores, consensus settlement — using stub clients that log instead of hitting the chain.
+### Localnet (one command)
 
 ```bash
-# From repo root: clean build + run tests
-bash scripts/reset.sh
-
-# Run the end-to-end demo
-cd scripts && npm run demo
+# Start local validator, deploy program, seed mock campaigns
+bash localnet.sh --reset
 ```
 
-### Full local-validator flow
+### Frontend dashboard
 
 ```bash
-# 1. Build the Anchor program
-cd contracts && anchor build
+cd frontend-next
+npm install
+npm run dev
+# → open http://localhost:3000
+```
 
-# 2. Start a local Solana validator with the program deployed
-anchor localnet
+Connect to `http://127.0.0.1:8899` (localnet) or any devnet RPC to load live campaigns.
 
-# 3. Airdrop SOL and mint devnet USDC to a test wallet, then init config
-# (see scripts/demo.ts inline comments for the required SDK calls)
+### SDK usage (agent side)
 
-# 4. Start the frontend dashboard
-cd ../frontend && npm run dev -- --host 0.0.0.0
-# → open http://localhost:5173
+```ts
+import { PoeClient, CAMPAIGN_MODE, ER_ENDPOINTS } from "@poe/sdk";
+import { Connection, Keypair } from "@solana/web3.js";
 
-# 5. Run all off-chain test suites
-cd ../agents/validator  && npm test
-cd ../agents/executor   && npm test
-cd ../agents/consensus  && npm test
-cd ../packages/sdk      && npm test
+const client = new PoeClient({ connection, payer });
+
+// Direct campaign
+await client.createCampaign({
+  campaignId,
+  executor,
+  validators,
+  thresholdBps,
+  amount,
+  taskRef,
+  deadlineUnix,
+});
+
+// RFQ campaign — executor chosen by bidding
+await client.createCampaignRfq({
+  campaignId,
+  amount,
+  taskRef,
+  validators,
+  thresholdBps,
+  deadlineUnix,
+  rfqDeadlineUnix,
+});
+
+// Executor agent bids
+await client.submitBid({
+  campaignPda,
+  bidId,
+  amount,
+  capabilitiesHash,
+  etaUnix,
+});
+
+// Creator agent accepts best bid
+await client.acceptBid({ campaignPda, bidPda, bidId });
+
+// MagicBlock ER fast path — delegate account to ER, validators score at ~50ms/slot
+await client.delegateCampaign(campaignId);
+const erConnection = new Connection(ER_ENDPOINTS.devnet, "confirmed");
+await client.submitValidatorScoreEr({
+  erConnection,
+  campaignId,
+  creator: creatorPk,
+  score: 8500,
+});
+await client.undelegateCampaign(campaignId); // commits state back to Solana
+```
+
+### Run all test suites
+
+```bash
+cd packages/sdk          && npm test   # 10 tests
+cd mcp-adapters/github-pr && npm test  # 11 tests
+cd mcp-adapters/x        && npm test   # 3 tests
 ```
 
 ### Clean reset
 
 ```bash
-# Wipe all build artifacts, rebuild packages, run tests
-bash scripts/reset.sh
-
-# Wipe only (no rebuild)
-bash scripts/reset.sh --clean
-```
-
-## SWARM CLI
-
-This project uses the [SWARM CLI](https://github.com/the-canteen-dev/SWARM-cli) to track progress.
-
-```bash
-swarm login       # authenticate with GitHub
-swarm status      # view dashboard
-swarm update      # submit traction / product updates
+bash scripts/reset.sh          # wipe + rebuild + test
+bash scripts/reset.sh --clean  # wipe only
 ```

@@ -9,7 +9,13 @@ const DashboardClient = dynamic(() => import("./DashboardClient"), {
 
 export default function DashboardWrapper() {
   return (
-    <Suspense fallback={<div className="max-w-5xl mx-auto px-4 py-6 text-sm text-zinc-500">Loading dashboard…</div>}>
+    <Suspense
+      fallback={
+        <div className="max-w-5xl mx-auto px-4 py-6 text-sm text-[#8aaea5]">
+          Loading campaigns…
+        </div>
+      }
+    >
       <DashboardClient />
     </Suspense>
   );

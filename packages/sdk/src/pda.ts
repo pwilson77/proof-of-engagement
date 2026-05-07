@@ -45,6 +45,25 @@ export async function findConfigPda(): Promise<[PublicKey, number]> {
   return PublicKey.findProgramAddress([Buffer.from("config")], PROGRAM_ID);
 }
 
+/** Derive Bid PDA. Seeds: ["bid", campaign_pubkey, bidder_pubkey, bid_id_le] */
+export async function findBidPda(
+  campaignPubkey: PublicKey,
+  bidderPubkey: PublicKey,
+  bidId: bigint,
+): Promise<[PublicKey, number]> {
+  const idBuf = Buffer.alloc(8);
+  idBuf.writeBigUInt64LE(bidId);
+  return PublicKey.findProgramAddress(
+    [
+      Buffer.from("bid"),
+      campaignPubkey.toBuffer(),
+      bidderPubkey.toBuffer(),
+      idBuf,
+    ],
+    PROGRAM_ID,
+  );
+}
+
 function campaignIdBuffer(campaignId: bigint): Buffer {
   const buf = Buffer.alloc(8);
   buf.writeBigUInt64LE(campaignId);

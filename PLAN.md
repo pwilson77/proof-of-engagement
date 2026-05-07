@@ -273,15 +273,15 @@ agents/executor      4/4 passed
 
 ### ✅ Step 10 complete
 
-| Deliverable | File |
-|---|---|
-| End-to-end demo script | `scripts/demo.ts` |
-| Clean-state reset script | `scripts/reset.sh` |
-| Reproducible run flow | `README.md` — Getting Started |
+| Deliverable              | File                          |
+| ------------------------ | ----------------------------- |
+| End-to-end demo script   | `scripts/demo.ts`             |
+| Clean-state reset script | `scripts/reset.sh`            |
+| Reproducible run flow    | `README.md` — Getting Started |
 
 `bash scripts/reset.sh` rebuilds all packages and runs all 47 off-chain tests from scratch. `cd scripts && npm run demo` runs the full agent flow (executor → 3 validators → consensus → settlement) with stub clients — no validator required.
 
-## 11. MagicBlock Integration Track (Performance Layer)
+## 11. MagicBlock Integration Track (Perfor
 
 This track is optional for MVP, but prioritized before final submission if stable.
 
@@ -329,3 +329,130 @@ This track is optional and should not block core submission readiness.
 - Prioritize end-to-end integrity over feature breadth.
 - Document blockers immediately and resolve before branching.
 - Extension tracks (11 and 12) are allowed only after Step 10 gate passes.
+
+## 13. RFQ + Generic Validator Extension Track
+
+Status: proposed.
+
+This track is optional, but it is the direct path to evolve PoE from fixed-assignment campaigns into a market-style flow similar to Agentic Dark Matter while preserving the existing escrow and settlement guarantees.
+
+### Goal A: Add RFQ Lifecycle (Discovery + Bidding + Acceptance)
+
+Support campaign creation without pre-selecting an executor. Allow executors to bid, then allow the creator to accept one bid before execution begins.
+
+### RFQ Account Model
+
+- `Campaign` (existing): add fields
+  - `mode: u8` where `0 = direct`, `1 = rfq`
+  - `rfq_deadline_unix: i64` (required when mode = rfq)
+  - `accepted_bid_id: u64` (0 if none)
+  - `executor: Pubkey` remains, but set to default until bid acceptance in rfq mode
+- `Bid` (new PDA): seeds = [`"bid"`, campaign, bidder, bid_id]
+  - `campaign: Pubkey`
+  - `bid_id: u64`
+  - `bidder: Pubkey`
+  - `amount: u64`
+  - `declared_capabilities_hash: [u8; 32]`
+  - `eta_unix: i64`
+  - `status: u8` (`open`, `withdrawn`, `accepted`, `rejected`)
+  - `created_at_unix: i64`
+- `BidBook` (optional optimization PDA): seeds = [`"bidbook"`, campaign]
+  - `next_bid_id: u64`
+  - `open_bid_count: u32`
+
+### RFQ Instructions
+
+- `create_campaign_rfq`
+  - Creates campaign in `rfq` mode and escrows funds.
+  - Does not set executor yet.
+- `submit_bid`
+  - Executor submits bid within RFQ window.
+  - Enforce one active bid per bidder per campaign (or replace latest by explicit rule).
+- `withdraw_bid`
+  - Bidder can mark open bid withdrawn before acceptance.
+- `accept_bid`
+  - Campaign creator accepts one open bid.
+  - Sets `campaign.executor = bidder` and `accepted_bid_id`.
+  - Rejects/locks all remaining open bids.
+- `expire_rfq`
+  - Anyone can mark campaign as rfq-expired after `rfq_deadline_unix` if no accepted bid.
+  - Enables creator refund path.
+
+### RFQ State Rules
+
+- Settlement instructions (`settle_success`, `settle_timeout_refund`) remain unchanged.
+- `executeCampaign` must reject if campaign mode is rfq and no accepted bid exists.
+- Accepted bid amount rules:
+  - Option 1: fixed payout from campaign escrow (simplest, current-compatible).
+  - Option 2: variable payout by bid amount (requires escrow delta accounting).
+  - Recommended phase 1: Option 1.
+
+### Goal B: Plug In Non-Social Validator Types
+
+Generalize validator evidence ingestion so validator agents can score any domain, not only social engagement.
+
+### Off-Chain Validator Plugin Interface
+
+- Add shared interface in validator package:
+  - `ValidatorAdapter.fetchEvidence(taskRef, context) -> RawEvidence`
+  - `ValidatorAdapter.normalize(raw) -> NormalizedEvidence`
+  - `ValidatorAdapter.score(normalized, policy) -> scoreBps`
+  - `ValidatorAdapter.classifyFailure(error) -> retryable | permanent`
+- Existing X adapter becomes one implementation (`x-social`).
+- Add at least one non-social adapter:
+  - `github-pr-review` (example): fetch PR metadata, CI status, reviewer approvals, changed files.
+
+### Evidence Envelope v2
+
+- Introduce typed evidence metadata for cross-domain scoring:
+  - `domain: "social" | "code" | "commerce" | "custom"`
+  - `schema_version: u16`
+  - `source: string`
+  - `payload_digest: [u8; 32]`
+- Keep on-chain validator score submission unchanged (still `u8` score + signer checks).
+- Store envelope and raw evidence only off-chain or in optional blob storage; pass digest on-chain.
+
+### SDK and UI Changes
+
+- SDK
+  - Add RFQ methods: `createCampaignRfq`, `submitBid`, `withdrawBid`, `acceptBid`, `listBids`.
+  - Add campaign query fields for RFQ state.
+  - Add validator adapter registry for agent/runtime configuration.
+- Frontend
+  - Campaign creation: mode selector (`Direct` or `RFQ`).
+  - RFQ campaign view: bid table, accept action (creator only), bid status chips.
+  - Validator details: show evidence domain tag and adapter name.
+
+### Security and Abuse Controls
+
+- Add bid spam control:
+  - minimum bid bond or rent-backed bid account requirement.
+  - per-bidder rate limit window.
+- Add creator abuse control:
+  - immutable acceptance once execution starts.
+  - explicit cancellation window policy.
+- Preserve existing protections:
+  - signer-bound score payloads.
+  - campaign-bound replay prevention.
+
+### Phased Delivery
+
+- Phase 13A (RFQ Core)
+  - On-chain bid accounts and RFQ instructions.
+  - SDK methods + minimal RFQ UI.
+  - Tests for bid lifecycle and acceptance invariants.
+- Phase 13B (Generic Validator)
+  - Validator adapter interface extraction.
+  - X adapter migrated to plugin model.
+  - One non-social adapter implemented and wired into consensus flow.
+- Phase 13C (Hardening)
+  - Spam/rate-limit defenses.
+  - Failure classification and fallback behavior across adapters.
+  - End-to-end benchmark against direct mode baseline.
+
+### Gate
+
+- RFQ flow passes deterministically:
+  - create rfq campaign -> submit >=2 bids -> accept one -> executor runs -> validators score -> settle.
+- Direct mode remains backward-compatible with zero behavior regression.
+- At least one non-social adapter completes end-to-end scoring and settlement without code-path forks in on-chain program logic.
