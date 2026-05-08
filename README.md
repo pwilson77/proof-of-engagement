@@ -50,7 +50,7 @@ In RFQ mode, Executor Agents submit bids during the `rfqDeadlineUnix` window. Th
 
 ## How It Differs
 
-| Feature       | Traditional bounty boards | PoE                           |
+| Feature       | Traditional bounty boards | AVN                           |
 | ------------- | ------------------------- | ----------------------------- |
 | Verification  | Manual / centralized      | Agent consensus via adapters  |
 | Settlement    | Human approval            | Threshold-gated, automatic    |
