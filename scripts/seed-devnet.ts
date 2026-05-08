@@ -34,6 +34,7 @@ import {
   findCampaignPda,
   findValidatorSetPda,
   findValidatorScorePda,
+  deserializeCampaign,
   PROGRAM_ID,
 } from "@poe/sdk";
 
@@ -91,17 +92,25 @@ function randomTaskRef(): Uint8Array {
   return arr;
 }
 
-async function airdropIfNeeded(
+async function fundIfNeeded(
   connection: Connection,
+  payer: Keypair,
   pk: PublicKey,
   minLamports = 50_000_000, // 0.05 SOL
 ) {
   const bal = await connection.getBalance(pk);
   if (bal < minLamports) {
-    console.log(`    airdrop 0.1 SOL → ${pk.toBase58().slice(0, 8)}…`);
-    const sig = await connection.requestAirdrop(pk, 100_000_000);
+    console.log(`    transfer 0.1 SOL → ${pk.toBase58().slice(0, 8)}…`);
+    const tx = new Transaction().add(
+      SystemProgram.transfer({
+        fromPubkey: payer.publicKey,
+        toPubkey: pk,
+        lamports: 100_000_000,
+      }),
+    );
+    const sig = await connection.sendTransaction(tx, [payer]);
     await connection.confirmTransaction(sig, "confirmed");
-    await sleep(1000);
+    await sleep(500);
   }
 }
 
@@ -126,7 +135,7 @@ async function submitValidatorScore(
     programId: PROGRAM_ID,
     keys: [
       { pubkey: signer.publicKey, isSigner: true, isWritable: true },
-      { pubkey: campaignPda, isSigner: false, isWritable: false },
+      { pubkey: campaignPda, isSigner: false, isWritable: true },
       { pubkey: validatorSetPda, isSigner: false, isWritable: false },
       { pubkey: scorePda, isSigner: false, isWritable: true },
       { pubkey: SystemProgram.programId, isSigner: false, isWritable: false },
@@ -145,18 +154,19 @@ async function settleSuccess(
   payer: Keypair,
   creator: PublicKey,
   campaignId: bigint,
-  usdcMint: PublicKey,
+  _usdcMint: PublicKey,
   executorPk: PublicKey,
   validators: Keypair[],
 ): Promise<string> {
   const [campaignPda] = await findCampaignPda(creator, campaignId);
-  const [validatorSetPda] = await findValidatorSetPda(creator, campaignId);
 
-  const escrowAta = await getAssociatedTokenAddress(
-    usdcMint,
-    campaignPda,
-    true,
-  );
+  // Read the real escrow address from on-chain campaign data (it's a random keypair set at init)
+  const campaignInfo = await connection.getAccountInfo(campaignPda);
+  if (!campaignInfo) throw new Error(`Campaign ${campaignId} not found`);
+  const campaignAccount = deserializeCampaign(new Uint8Array(campaignInfo.data));
+  const escrowTokenAccount = campaignAccount.escrowTokenAccount;
+
+  const usdcMint = campaignAccount.mint;
   const executorAta = await getAssociatedTokenAddress(usdcMint, executorPk);
 
   const scorePdaKeys = await Promise.all(
@@ -173,8 +183,7 @@ async function settleSuccess(
     keys: [
       { pubkey: payer.publicKey, isSigner: true, isWritable: true },
       { pubkey: campaignPda, isSigner: false, isWritable: true },
-      { pubkey: validatorSetPda, isSigner: false, isWritable: false },
-      { pubkey: escrowAta, isSigner: false, isWritable: true },
+      { pubkey: escrowTokenAccount, isSigner: false, isWritable: true },
       { pubkey: executorAta, isSigner: false, isWritable: true },
       { pubkey: TOKEN_PROGRAM_ID, isSigner: false, isWritable: false },
       ...scorePdaKeys,
@@ -188,15 +197,19 @@ async function settleSuccess(
   return sig;
 }
 
+async function campaignExists(connection: Connection, creator: PublicKey, campaignId: bigint): Promise<boolean> {
+  const [pda] = await findCampaignPda(creator, campaignId);
+  const info = await connection.getAccountInfo(pda);
+  return info !== null;
+}
+
 // ── Main ──────────────────────────────────────────────────────────────────────
 async function main() {
   const mintArg = process.env.MINT;
   if (!mintArg) throw new Error("Set MINT=<token-mint-pubkey> env variable.");
 
-  const connection = new Connection(
-    "https://api.devnet.solana.com",
-    "confirmed",
-  );
+  const rpc = process.env.RPC_URL ?? "https://devnet.helius-rpc.com/?api-key=b539e607-6c09-4971-9115-7e8e1befc126";
+  const connection = new Connection(rpc, "confirmed");
   const payer = loadDefaultKeypair();
   const usdcMint = new PublicKey(mintArg);
 
@@ -209,7 +222,7 @@ async function main() {
   // ── Fund actors ─────────────────────────────────────────────────────────────
   console.log("\n▶ Fund validator/executor keypairs…");
   for (const kp of [ALICE, BOB, CAROL, DAVE, ALPHA, GAMMA]) {
-    await airdropIfNeeded(connection, kp.publicKey);
+    await fundIfNeeded(connection, payer, kp.publicKey);
   }
 
   // ── Create ATAs & fund tokens ───────────────────────────────────────────────
@@ -237,52 +250,68 @@ async function main() {
 
   // ── Campaign #1 — OPEN, direct mode ────────────────────────────────────────
   console.log("\n▶ Campaign #1 — OPEN direct");
-  await sdk.createCampaign({
-    campaignId: 1n,
-    executor: ALPHA.publicKey,
-    validators: [ALICE.publicKey, BOB.publicKey, CAROL.publicKey],
-    thresholdBps: 7000,
-    amount: 500_000n,
-    taskRef: randomTaskRef(),
-    deadlineUnix: BigInt(now + 86400 * 7),
-  });
-  console.log("  ✓ campaign #1 open");
+  if (await campaignExists(connection, payer.publicKey, 1n)) {
+    console.log("  ✓ already exists — skipping");
+  } else {
+    await sdk.createCampaign({
+      campaignId: 1n,
+      executor: ALPHA.publicKey,
+      validators: [ALICE.publicKey, BOB.publicKey, CAROL.publicKey],
+      thresholdBps: 7000,
+      amount: 500_000n,
+      taskRef: randomTaskRef(),
+      deadlineUnix: BigInt(now + 86400 * 7),
+    });
+    console.log("  ✓ campaign #1 open");
+  }
 
   // ── Campaign #2 — OPEN, RFQ mode ───────────────────────────────────────────
   console.log("\n▶ Campaign #2 — OPEN RFQ");
-  await sdk.createCampaignRfq({
-    campaignId: 2n,
-    amount: 1_000_000n,
-    taskRef: randomTaskRef(),
-    validators: [ALICE.publicKey, DAVE.publicKey],
-    thresholdBps: 6000,
-    deadlineUnix: BigInt(now + 86400 * 14),
-    rfqDeadlineUnix: BigInt(now + 86400 * 3),
-  });
-  console.log("  ✓ campaign #2 open (RFQ)");
+  if (await campaignExists(connection, payer.publicKey, 2n)) {
+    console.log("  ✓ already exists — skipping");
+  } else {
+    await sdk.createCampaignRfq({
+      campaignId: 2n,
+      amount: 1_000_000n,
+      taskRef: randomTaskRef(),
+      validators: [ALICE.publicKey, DAVE.publicKey],
+      thresholdBps: 6000,
+      deadlineUnix: BigInt(now + 86400 * 14),
+      rfqDeadlineUnix: BigInt(now + 86400 * 3),
+    });
+    console.log("  ✓ campaign #2 open (RFQ)");
+  }
 
   // ── Campaign #3 — SETTLED_SUCCESS ──────────────────────────────────────────
   console.log("\n▶ Campaign #3 — settle success");
-  const [cp3] = await findCampaignPda(payer.publicKey, 3n);
-  await sdk.createCampaign({
-    campaignId: 3n,
-    executor: GAMMA.publicKey,
-    validators: [BOB.publicKey, CAROL.publicKey],
-    thresholdBps: 6000,
-    amount: 250_000n,
-    taskRef: randomTaskRef(),
-    deadlineUnix: BigInt(now + 86400 * 7),
-  });
+  if (!await campaignExists(connection, payer.publicKey, 3n)) {
+    await sdk.createCampaign({
+      campaignId: 3n,
+      executor: GAMMA.publicKey,
+      validators: [BOB.publicKey, CAROL.publicKey],
+      thresholdBps: 6000,
+      amount: 250_000n,
+      taskRef: randomTaskRef(),
+      deadlineUnix: BigInt(now + 86400 * 7),
+    });
+    await sleep(1000);
+  }
 
-  await sleep(1000);
+  // Score submissions are idempotent — skip if already scored
+  for (const [actor, score] of [[BOB, 9000], [CAROL, 8500]] as const) {
+    try {
+      await submitValidatorScore(connection, actor, payer.publicKey, 3n, score);
+      console.log(`  ✓ ${actor === BOB ? "Bob" : "Carol"} scored ${score}`);
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : String(e);
+      if (msg.includes("already in use") || msg.includes("0x0")) {
+        console.log(`  ✓ ${actor === BOB ? "Bob" : "Carol"} score already submitted`);
+      } else {
+        throw e;
+      }
+    }
+  }
 
-  // Bob and Carol both score above threshold
-  await submitValidatorScore(connection, BOB, payer.publicKey, 3n, 9000);
-  console.log("  ✓ Bob scored 9000");
-  await submitValidatorScore(connection, CAROL, payer.publicKey, 3n, 8500);
-  console.log("  ✓ Carol scored 8500");
-
-  // Create executor ATA if not already done
   const gammaAta = await getAssociatedTokenAddress(usdcMint, GAMMA.publicKey);
   const ensureGammaAtaTx = new Transaction().add(
     createAssociatedTokenAccountIdempotentInstruction(
@@ -311,7 +340,7 @@ async function main() {
   console.log("  #1 — OPEN (direct)         campaignId=1");
   console.log("  #2 — OPEN (RFQ)            campaignId=2");
   console.log("  #3 — SETTLED_SUCCESS       campaignId=3");
-  console.log("\nOpen the dashboard, set RPC to https://api.devnet.solana.com");
+  console.log("\nOpen the dashboard, set RPC to https://devnet.helius-rpc.com/?api-key=b539e607-6c09-4971-9115-7e8e1befc126");
 }
 
 main().catch((e) => {
