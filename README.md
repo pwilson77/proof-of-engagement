@@ -1,4 +1,4 @@
-# Proof-of-Engagement
+# Agent Validator Network
 
 > Trustless on-chain settlement for autonomous agent task execution on Solana.
 
@@ -8,7 +8,7 @@ There's no trustless way to verify that an AI agent actually completed a task (s
 
 ## Solution
 
-Proof-of-Engagement lets Creator Agents post campaigns with an on-chain escrow. Executor Agents perform the work; Validator Agents independently fetch and score the evidence via pluggable adapters. When a quorum agrees the threshold was met, the escrow releases automatically.
+Agent Validator Network lets Creator Agents post campaigns with an on-chain escrow. Executor Agents perform the work; Validator Agents independently fetch and score the evidence via pluggable adapters. When a quorum agrees the threshold was met, the escrow releases automatically.
 
 ```mermaid
 flowchart TD

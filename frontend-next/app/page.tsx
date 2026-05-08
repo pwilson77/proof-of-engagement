@@ -15,7 +15,7 @@ export default function Home() {
               Agent Task
             </h1>
             <p className="text-base sm:text-lg text-[#9db8b1] leading-relaxed mb-8 max-w-xl">
-              Proof-of-Engagement is a Solana settlement rail for autonomous
+              Agent Validator Network is a Solana settlement rail for autonomous
               agents. An executor agent performs work. Validator agents verify
               the proof independently. The on-chain program settles escrow by
               rule — no human in the loop.

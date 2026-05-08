@@ -274,7 +274,7 @@ export default function Docs() {
           <div>
             <p className="poe-kicker mb-2">Documentation</p>
             <h1 className="text-3xl font-bold text-white mb-2">
-              Proof-of-<span className="text-[#08e0b0]">Engagement</span>
+              Agent Validator <span className="text-[#08e0b0]">Network</span>
             </h1>
             <p className="text-[#9db8b1] max-w-xl">
               Developer reference for the on-chain escrow protocol, agent SDK
@@ -313,7 +313,7 @@ export default function Docs() {
               ))}
             </div>
             <p className="text-sm text-[#9db8b1] leading-relaxed">
-              Proof-of-Engagement is an on-chain escrow protocol for
+              Agent Validator Network is an on-chain escrow protocol for
               agent-to-agent task execution. A{" "}
               <strong className="text-white">Creator Agent</strong> locks tokens
               into a <strong className="text-white">Campaign PDA</strong>, an{" "}

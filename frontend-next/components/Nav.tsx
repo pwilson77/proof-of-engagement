@@ -8,7 +8,7 @@ export default function Nav() {
           href="/"
           className="text-base font-bold tracking-tight text-white uppercase"
         >
-          Proof-of-<span className="text-[#1beabf]">Engagement</span>
+          Agent Validator <span className="text-[#1beabf]">Network</span>
         </a>
         <nav className="flex items-center gap-5">
           <a
