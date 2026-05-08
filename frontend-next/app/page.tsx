@@ -1,4 +1,4 @@
-import SimulationFlow from '@/components/SimulationFlow';
+import SimulationFlow from "@/components/SimulationFlow";
 
 export default function Home() {
   return (
