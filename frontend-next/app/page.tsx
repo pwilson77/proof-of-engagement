@@ -1,3 +1,5 @@
+import SimulationFlow from '@/components/SimulationFlow';
+
 export default function Home() {
   return (
     <div className="flex flex-col poe-grid-bg">
@@ -118,6 +120,9 @@ export default function Home() {
           ))}
         </div>
       </section>
+
+      {/* Simulation Flow */}
+      <SimulationFlow />
 
       {/* Why */}
       <section className="border-y border-[#133a34] bg-[#060b0a]/70">
