@@ -3,7 +3,7 @@ import Nav from "@/components/Nav";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Proof-of-Engagement",
+  title: "Agent Validator Network",
   description:
     "Trustless escrow and multi-validator settlement for autonomous agent workflows on Solana.",
 };

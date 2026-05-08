@@ -1,0 +1,7 @@
+frontend-next/test-ledger/
+frontend-next/.anchor/
+contracts/
+audits/
+.anchor/
+*.json.bak
+node_modules/

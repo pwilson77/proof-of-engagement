@@ -45,7 +45,7 @@ function getRpcUrl(): string {
   } catch {
     // fall through
   }
-  return "https://api.devnet.solana.com";
+  return "https://devnet.helius-rpc.com/?api-key=b539e607-6c09-4971-9115-7e8e1befc126";
 }
 
 async function main() {
