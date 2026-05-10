@@ -86,7 +86,7 @@ export default function SimulationFlow() {
         (node) =>
           `style ${node} stroke:#2a3a37,stroke-width:1.5px,fill:#0a1513,color:#6f8983`,
       )
-      .join('\n');
+      .join("\n");
 
     const styleLines = steps
       .flatMap((step, idx) => {
@@ -96,7 +96,7 @@ export default function SimulationFlow() {
         }
 
         const style =
-          'stroke:#2ef2c4,stroke-width:3px,fill:#07100f,color:#2ef2c4';
+          "stroke:#2ef2c4,stroke-width:3px,fill:#07100f,color:#2ef2c4";
 
         return step.nodes.map((node) => `style ${node} ${style}`);
       })
@@ -145,6 +145,14 @@ flowchart TD
       );
       if (!isCancelled && diagramRef.current) {
         diagramRef.current.innerHTML = svg;
+        const svgEl = diagramRef.current.querySelector("svg");
+        if (svgEl) {
+          svgEl.setAttribute("width", "100%");
+          svgEl.removeAttribute("height");
+          svgEl.style.maxWidth = "100%";
+          svgEl.style.height = "auto";
+          svgEl.style.display = "block";
+        }
       }
     };
 
@@ -169,7 +177,7 @@ flowchart TD
 
         {/* Mermaid diagram container */}
         <div className="poe-panel rounded-xl p-6 mb-8 overflow-x-auto">
-          <div ref={diagramRef} className="min-w-225 mermaid-flow" />
+          <div ref={diagramRef} className="w-full mermaid-flow" />
         </div>
 
         {/* Step indicators */}
@@ -198,7 +206,7 @@ flowchart TD
           <div className="flex items-center gap-2">
             <div
               className={`w-2 h-2 rounded-full bg-[#2ef2c4] ${
-                isRunning ? 'animate-pulse' : ''
+                isRunning ? "animate-pulse" : ""
               }`}
             />
             <span className="text-sm text-[#9db8b1]">

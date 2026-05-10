@@ -36,3 +36,7 @@ test-ledger/
 # Editor
 .vscode/settings.json
 *.pem
+.vercel
+
+# Local demo orchestration kit (keep untracked)
+demo/

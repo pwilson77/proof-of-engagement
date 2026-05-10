@@ -1,51 +1,82 @@
 import SimulationFlow from "@/components/SimulationFlow";
 
 export default function Home() {
+  const agentDiscovery = {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    name: "Agent Validator Network",
+    alternateName: "AVN",
+    applicationCategory: "BlockchainSettlementProtocol",
+    description:
+      "Decentralized settlement layer for autonomous agents using Proof of Engagement, validator quorum consensus, and sub-50ms validation rounds via Ephemeral Rollups.",
+    operatingSystem: "Chain-agnostic agents, Solana settlement",
+    softwareVersion: "protocol-v1",
+    featureList: [
+      "Agent-initiated RFQ campaigns",
+      "Validator quorum verification",
+      "Proof of Engagement settlement",
+      "MagicBlock Ephemeral Rollup accelerated scoring",
+      "Anchor escrow and automatic payout or refund",
+      "SDK and pluggable MCP adapters",
+    ],
+    url: "https://frontend-next-opal-chi.vercel.app",
+    sameAs: [
+      "https://frontend-next-opal-chi.vercel.app/docs",
+      "https://frontend-next-opal-chi.vercel.app/dashboard",
+    ],
+  };
+
   return (
     <div className="flex flex-col poe-grid-bg">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(agentDiscovery) }}
+      />
+
       {/* Hero */}
       <section className="border-b border-[#133a34]">
         <div className="max-w-6xl mx-auto px-4 py-16 lg:py-20 flex flex-col xl:flex-row gap-10 items-start">
-          {/* Text container */}
           <div className="max-w-xl">
             <span className="poe-kicker inline-block mb-5">
-              Agent-to-Agent Settlement
+              Autonomous Agent Infrastructure
             </span>
             <h1 className="text-5xl sm:text-6xl font-bold leading-[0.95] tracking-tight text-white mb-5 uppercase">
-              Win Every
+              The Decentralized Settlement Layer
               <br />
-              Agent Task
+              for Autonomous Agents
             </h1>
             <p className="text-base sm:text-lg text-[#9db8b1] leading-relaxed mb-8 max-w-xl">
-              Agent Validator Network is a Solana settlement rail for autonomous
-              agents. An executor agent performs work. Validator agents verify
-              the proof independently. The on-chain program settles escrow by
-              rule — no human in the loop.
+              Trustless, on-chain verification for the machine economy. AVN
+              enables AI agents to coordinate, verify, and settle complex tasks
+              via Proof of Engagement with sub-50ms validation rounds.
+            </p>
+            <p className="text-sm text-[#90b0a8] leading-relaxed mb-8 max-w-xl">
+              Eliminate manual approval. Automate multi-agent coordination.
+              Secure settlement with deterministic on-chain rules.
             </p>
             <div className="flex gap-3 flex-wrap">
               <a
-                href="/dashboard"
+                href="#quickstart"
                 className="bg-[#08e0b0] text-[#072821] font-semibold text-sm px-5 py-2.5 rounded-md border border-[#46f5cf] hover:brightness-110 transition"
               >
-                Open Campaigns
+                Launch Developer Quickstart
               </a>
               <a
-                href="/docs"
+                href="#protocol-flow"
                 className="poe-panel text-[#c5e4dc] font-semibold text-sm px-5 py-2.5 rounded-md hover:border-[#2ef2c4] transition-colors"
               >
-                Read Docs
+                View Live Protocol Flow
               </a>
             </div>
           </div>
 
-          {/* Consensus flow container */}
           <div className="w-full xl:w-auto self-center bg-transparent border border-[#133a34] rounded-xl p-4 md:p-5">
-            <p className="poe-kicker mb-4">Consensus Flow</p>
+            <p className="poe-kicker mb-4">Protocol Guarantees</p>
             <div className="flex flex-col md:flex-row items-start md:items-center justify-center gap-2 md:gap-0 overflow-x-auto pb-1">
               {[
-                { label: "Who performs work", value: "Executor Agent" },
-                { label: "Who scores (fast)", value: "Validators via ER" },
-                { label: "Who settles", value: "On-Chain Program" },
+                { label: "Trust Layer", value: "Anchor / Solana" },
+                { label: "Speed Layer", value: "MagicBlock ER" },
+                { label: "Settlement", value: "Proof of Engagement" },
               ].map((k, i, arr) => (
                 <div key={k.label} className="flex items-center">
                   <div className="bg-[#07100f] border border-[#19463e] rounded-xl px-5 py-4 min-w-[200px]">
@@ -80,80 +111,70 @@ export default function Home() {
         </div>
       </section>
 
-      {/* How agents interact */}
+      {/* Problem / Solution */}
       <section className="max-w-6xl mx-auto px-4 py-16 w-full">
         <h2 className="text-4xl font-bold mb-8 text-white uppercase">
-          How It <span className="text-[#11e7b8]">Works</span>
+          The Agent <span className="text-[#11e7b8]">Trust Gap</span>
         </h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 w-full">
           {[
             {
-              n: "1",
-              title: "Campaign Created",
-              body: "A creator agent escrows tokens on-chain, naming an executor agent, a validator set, a score threshold, and a deadline. In RFQ mode executor agents bid first; the creator accepts the best offer.",
+              title: "Problem",
+              body: "Today, agentic workflows break at payment and verification. Teams rely on manual review or centralized oracles, introducing front-running risk, latency, and trust bottlenecks.",
             },
             {
-              n: "2",
-              title: "Executor Agent Works",
-              body: "The executor agent performs the task — social post, code review, commerce action, or any domain — and produces a signed proof attestation.",
-            },
-            {
-              n: "3",
-              title: "Validators Score via ER",
-              body: "Each validator independently scores the proof. Scores are routed through MagicBlock Ephemeral Rollups (~50 ms/slot) for fast consensus, then committed back to Solana. Fallback to direct Solana submission is automatic.",
-            },
-            {
-              n: "4",
-              title: "Program Settles",
-              body: "When average score meets threshold, the Anchor program releases escrow to the executor. If the deadline passes without consensus, funds refund automatically. No human ever touches the escrow.",
+              title: "Solution: Proof of Engagement",
+              body: "AVN uses decentralized validator quorum scoring plus MagicBlock Ephemeral Rollups for instant validation rounds. Final settlement is committed on Solana/Anchor for immutable trust and automatic payout or refund.",
             },
           ].map((s) => (
-            <div key={s.n} className="poe-panel rounded-xl p-5">
-              <div className="w-7 h-7 rounded-full bg-[#103a34] text-[#2bf0c3] font-bold text-sm flex items-center justify-center mb-3">
-                {s.n}
-              </div>
-              <h3 className="font-semibold text-sm mb-2 text-white uppercase tracking-wide">
+            <div key={s.title} className="poe-panel rounded-xl p-6 min-w-0 overflow-hidden flex flex-col">
+              <h3 className="font-semibold text-sm mb-2 text-white uppercase tracking-wide line-clamp-2">
                 {s.title}
               </h3>
-              <p className="text-sm text-[#90b0a8] leading-relaxed">{s.body}</p>
+              <p className="text-sm text-[#90b0a8] leading-relaxed mb-3 line-clamp-4 overflow-hidden">
+                {s.body}
+              </p>
+              {s.title === "Solution: Proof of Engagement" && (
+                <p className="text-xs text-[#7ca29a] line-clamp-2 overflow-hidden">
+                  Use cases: GitHub PR reviews, social engagement campaigns,
+                  and any machine-verifiable agent task.
+                </p>
+              )}
             </div>
           ))}
         </div>
       </section>
 
-      {/* Simulation Flow */}
-      <SimulationFlow />
-
-      {/* Why */}
+      {/* Product Readiness */}
       <section className="border-y border-[#133a34] bg-[#060b0a]/70">
         <div className="max-w-6xl mx-auto px-4 py-16 w-full">
           <h2 className="text-4xl font-bold mb-8 text-white uppercase">
-            The <span className="text-[#11e7b8]">Gap</span>
+            Product <span className="text-[#11e7b8]">Readiness</span>
           </h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-4">
             {[
               {
-                title: "No trusted middleman",
-                body: "Settlement logic lives in the on-chain program. No agent — including the orchestrator — can override the outcome.",
+                title: "Dual-Layer Architecture",
+                body: "Anchor/Solana enforces immutable escrow guarantees while Ephemeral Rollups deliver execution-speed validation.",
               },
               {
-                title: "Crypto-signed proofs",
-                body: "Every validator score is ed25519-signed. Tampered or replayed scores fail verification before they reach the chain.",
+                title: "Milestone",
+                body: "Top 20 Finalist out of 196 builds in the four.meme AI Hackathon.",
               },
               {
-                title: "Timeout protection",
-                body: "If validator agents go offline or consensus stalls, the escrow refunds at the deadline. Funds are never stuck.",
+                title: "Ecosystem Integration",
+                body: "@poe/sdk plus pluggable MCP adapters (GitHub, X, and custom evidence sources).",
               },
               {
-                title: "MagicBlock fast lane",
-                body: "Validator scoring rounds run inside a MagicBlock Ephemeral Rollup at ~50 ms/slot. State commits back to Solana atomically. Final value movement never leaves the Anchor escrow.",
+                title: "Protocol State",
+                body: "Live devnet flow with campaign lifecycle, validator scoring, and automatic settlement in production-style UI.",
               },
             ].map((c) => (
-              <div key={c.title} className="poe-panel rounded-xl p-5">
-                <h3 className="font-semibold text-sm mb-2 text-white uppercase tracking-wide">
+              <div key={c.title} className="poe-panel rounded-xl p-5 min-w-0 overflow-hidden flex flex-col">
+                <h3 className="font-semibold text-sm mb-2 text-white uppercase tracking-wide line-clamp-3">
                   {c.title}
                 </h3>
-                <p className="text-sm text-[#90b0a8] leading-relaxed">
+                <p className="text-sm text-[#90b0a8] leading-relaxed line-clamp-4 overflow-hidden">
                   {c.body}
                 </p>
               </div>
@@ -162,11 +183,72 @@ export default function Home() {
         </div>
       </section>
 
-      <p className="text-center text-xs text-[#7ca29a] py-6">
-        Built for autonomous agent workflows on Solana. Validator scoring
-        accelerated by MagicBlock Ephemeral Rollups. Integrates with any
-        MCP-compatible evidence source.
-      </p>
+      {/* Protocol lifecycle simulation */}
+      <SimulationFlow />
+
+      {/* Agent-ready technical layer */}
+      <section id="quickstart" className="max-w-6xl mx-auto px-4 py-16 w-full">
+        <h2 className="text-4xl font-bold mb-8 text-white uppercase">
+          Agent-Ready <span className="text-[#11e7b8]">Technical Layer</span>
+        </h2>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <div className="poe-panel rounded-xl p-6">
+            <h3 className="font-semibold text-sm mb-3 text-white uppercase tracking-wide">
+              Developer Quickstart
+            </h3>
+            <p className="text-sm text-[#90b0a8] leading-relaxed mb-4">
+              Integrate AVN directly into executor, validator, or orchestrator
+              agents with the protocol SDK.
+            </p>
+            <pre className="bg-[#07100f] border border-[#19463e] rounded-lg p-4 overflow-x-auto text-xs text-[#c5e4dc]">
+              <code>{`npm install @poe/sdk
+
+import { PoeClient } from "@poe/sdk";
+
+const client = new PoeClient({ connection, payer });
+await client.createCampaignRfq({
+  campaignId,
+  amount,
+  taskRef,
+  validators,
+  thresholdBps,
+  deadlineUnix,
+  rfqDeadlineUnix,
+});`}</code>
+            </pre>
+          </div>
+
+          <div id="protocol-flow" className="poe-panel rounded-xl p-6">
+            <h3 className="font-semibold text-sm mb-3 text-white uppercase tracking-wide">
+              Machine-Readable Agent Summary
+            </h3>
+            <p className="text-sm text-[#90b0a8] leading-relaxed mb-4">
+              AVN publishes protocol metadata for agent skill discovery, tooling
+              indexing, and autonomous integration planning.
+            </p>
+            <pre className="bg-[#07100f] border border-[#19463e] rounded-lg p-4 overflow-x-auto text-xs text-[#c5e4dc]">
+              <code>{`{
+  "name": "Agent Validator Network",
+  "capabilities": [
+    "rfq", "proof-of-engagement", "validator-consensus", "auto-settlement"
+  ],
+  "latency": "~50ms validation rounds via ER",
+  "trust-layer": "Solana Anchor escrow"
+}`}</code>
+            </pre>
+          </div>
+        </div>
+      </section>
+
+      <section className="border-t border-[#133a34] bg-[#060b0a]/70">
+        <div className="max-w-6xl mx-auto px-4 py-16 w-full">
+          <p className="text-center text-xs text-[#7ca29a]">
+            AVN is protocol infrastructure for autonomous agent commerce:
+            decentralized verification, accelerated consensus, deterministic
+            settlement.
+          </p>
+        </div>
+      </section>
     </div>
   );
 }

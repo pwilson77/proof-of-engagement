@@ -11,6 +11,8 @@
  *   #1 — OPEN         Alice+Bob+Carol validators, Alpha executor  (no scores yet)
  *   #2 — OPEN (RFQ)   Alice+Dave validators, bid window open
  *   #3 — SETTLED      Bob+Carol validators,  Gamma executor  (Bob 9000, Carol 8500)
+ *   #4 — OPEN         Five-validator primary demo campaign
+ *   #5 — OPEN         Three-validator fallback demo campaign
  */
 
 import {
@@ -35,6 +37,8 @@ import {
   findValidatorSetPda,
   findValidatorScorePda,
   deserializeCampaign,
+  statusLabel,
+  CAMPAIGN_STATUS,
   PROGRAM_ID,
 } from "@poe/sdk";
 
@@ -50,6 +54,7 @@ const ALICE = deterministicKp("poe:validator:alice:000000000000");
 const BOB = deterministicKp("poe:validator:bob:0000000000000");
 const CAROL = deterministicKp("poe:validator:carol:00000000000");
 const DAVE = deterministicKp("poe:validator:dave:0000000000000");
+const ERIN = deterministicKp("poe:validator:erin:0000000000000");
 
 const ALPHA = deterministicKp("poe:executor:alpha:00000000000000");
 const GAMMA = deterministicKp("poe:executor:gamma:0000000000000000");
@@ -163,7 +168,9 @@ async function settleSuccess(
   // Read the real escrow address from on-chain campaign data (it's a random keypair set at init)
   const campaignInfo = await connection.getAccountInfo(campaignPda);
   if (!campaignInfo) throw new Error(`Campaign ${campaignId} not found`);
-  const campaignAccount = deserializeCampaign(new Uint8Array(campaignInfo.data));
+  const campaignAccount = deserializeCampaign(
+    new Uint8Array(campaignInfo.data),
+  );
   const escrowTokenAccount = campaignAccount.escrowTokenAccount;
 
   const usdcMint = campaignAccount.mint;
@@ -197,10 +204,25 @@ async function settleSuccess(
   return sig;
 }
 
-async function campaignExists(connection: Connection, creator: PublicKey, campaignId: bigint): Promise<boolean> {
+async function campaignExists(
+  connection: Connection,
+  creator: PublicKey,
+  campaignId: bigint,
+): Promise<boolean> {
   const [pda] = await findCampaignPda(creator, campaignId);
   const info = await connection.getAccountInfo(pda);
   return info !== null;
+}
+
+async function campaignStatus(
+  connection: Connection,
+  creator: PublicKey,
+  campaignId: bigint,
+): Promise<number | null> {
+  const [pda] = await findCampaignPda(creator, campaignId);
+  const info = await connection.getAccountInfo(pda);
+  if (!info) return null;
+  return deserializeCampaign(new Uint8Array(info.data)).status;
 }
 
 // ── Main ──────────────────────────────────────────────────────────────────────
@@ -208,7 +230,9 @@ async function main() {
   const mintArg = process.env.MINT;
   if (!mintArg) throw new Error("Set MINT=<token-mint-pubkey> env variable.");
 
-  const rpc = process.env.RPC_URL ?? "https://devnet.helius-rpc.com/?api-key=b539e607-6c09-4971-9115-7e8e1befc126";
+  const rpc =
+    process.env.RPC_URL ??
+    "https://devnet.helius-rpc.com/?api-key=b539e607-6c09-4971-9115-7e8e1befc126";
   const connection = new Connection(rpc, "confirmed");
   const payer = loadDefaultKeypair();
   const usdcMint = new PublicKey(mintArg);
@@ -221,7 +245,7 @@ async function main() {
 
   // ── Fund actors ─────────────────────────────────────────────────────────────
   console.log("\n▶ Fund validator/executor keypairs…");
-  for (const kp of [ALICE, BOB, CAROL, DAVE, ALPHA, GAMMA]) {
+  for (const kp of [ALICE, BOB, CAROL, DAVE, ERIN, ALPHA, GAMMA]) {
     await fundIfNeeded(connection, payer, kp.publicKey);
   }
 
@@ -284,7 +308,7 @@ async function main() {
 
   // ── Campaign #3 — SETTLED_SUCCESS ──────────────────────────────────────────
   console.log("\n▶ Campaign #3 — settle success");
-  if (!await campaignExists(connection, payer.publicKey, 3n)) {
+  if (!(await campaignExists(connection, payer.publicKey, 3n))) {
     await sdk.createCampaign({
       campaignId: 3n,
       executor: GAMMA.publicKey,
@@ -297,50 +321,112 @@ async function main() {
     await sleep(1000);
   }
 
-  // Score submissions are idempotent — skip if already scored
-  for (const [actor, score] of [[BOB, 9000], [CAROL, 8500]] as const) {
-    try {
-      await submitValidatorScore(connection, actor, payer.publicKey, 3n, score);
-      console.log(`  ✓ ${actor === BOB ? "Bob" : "Carol"} scored ${score}`);
-    } catch (e: unknown) {
-      const msg = e instanceof Error ? e.message : String(e);
-      if (msg.includes("already in use") || msg.includes("0x0")) {
-        console.log(`  ✓ ${actor === BOB ? "Bob" : "Carol"} score already submitted`);
-      } else {
-        throw e;
+  const c3Status = await campaignStatus(connection, payer.publicKey, 3n);
+  if (c3Status !== CAMPAIGN_STATUS.OPEN) {
+    console.log(
+      `  ✓ campaign #3 already ${statusLabel(c3Status ?? 0)} — skipping settle`,
+    );
+  } else {
+    // Score submissions are idempotent — skip if already scored
+    for (const [actor, score] of [
+      [BOB, 9000],
+      [CAROL, 8500],
+    ] as const) {
+      try {
+        await submitValidatorScore(
+          connection,
+          actor,
+          payer.publicKey,
+          3n,
+          score,
+        );
+        console.log(`  ✓ ${actor === BOB ? "Bob" : "Carol"} scored ${score}`);
+      } catch (e: unknown) {
+        const msg = e instanceof Error ? e.message : String(e);
+        if (msg.includes("already in use") || msg.includes("0x0")) {
+          console.log(
+            `  ✓ ${actor === BOB ? "Bob" : "Carol"} score already submitted`,
+          );
+        } else {
+          throw e;
+        }
       }
     }
+
+    const gammaAta = await getAssociatedTokenAddress(usdcMint, GAMMA.publicKey);
+    const ensureGammaAtaTx = new Transaction().add(
+      createAssociatedTokenAccountIdempotentInstruction(
+        payer.publicKey,
+        gammaAta,
+        GAMMA.publicKey,
+        usdcMint,
+      ),
+    );
+    const ensureSig = await connection.sendTransaction(ensureGammaAtaTx, [payer]);
+    await connection.confirmTransaction(ensureSig, "confirmed");
+
+    await settleSuccess(
+      connection,
+      payer,
+      payer.publicKey,
+      3n,
+      usdcMint,
+      GAMMA.publicKey,
+      [BOB, CAROL],
+    );
+    console.log("  ✓ campaign #3 settled success");
   }
 
-  const gammaAta = await getAssociatedTokenAddress(usdcMint, GAMMA.publicKey);
-  const ensureGammaAtaTx = new Transaction().add(
-    createAssociatedTokenAccountIdempotentInstruction(
-      payer.publicKey,
-      gammaAta,
-      GAMMA.publicKey,
-      usdcMint,
-    ),
-  );
-  const ensureSig = await connection.sendTransaction(ensureGammaAtaTx, [payer]);
-  await connection.confirmTransaction(ensureSig, "confirmed");
+  // ── Campaign #4 — OPEN, primary validation demo (5 validators) ───────────
+  console.log("\n▶ Campaign #4 — OPEN primary (5 validators)");
+  if (await campaignExists(connection, payer.publicKey, 4n)) {
+    console.log("  ✓ already exists — skipping");
+  } else {
+    await sdk.createCampaign({
+      campaignId: 4n,
+      executor: ALPHA.publicKey,
+      validators: [
+        ALICE.publicKey,
+        BOB.publicKey,
+        CAROL.publicKey,
+        DAVE.publicKey,
+        ERIN.publicKey,
+      ],
+      thresholdBps: 7000,
+      amount: 800_000n,
+      taskRef: randomTaskRef(),
+      deadlineUnix: BigInt(now + 86400 * 7),
+    });
+    console.log("  ✓ campaign #4 open (5 validators)");
+  }
 
-  await settleSuccess(
-    connection,
-    payer,
-    payer.publicKey,
-    3n,
-    usdcMint,
-    GAMMA.publicKey,
-    [BOB, CAROL],
-  );
-  console.log("  ✓ campaign #3 settled success");
+  // ── Campaign #5 — OPEN, fallback validation demo (3 validators) ──────────
+  console.log("\n▶ Campaign #5 — OPEN fallback (3 validators)");
+  if (await campaignExists(connection, payer.publicKey, 5n)) {
+    console.log("  ✓ already exists — skipping");
+  } else {
+    await sdk.createCampaign({
+      campaignId: 5n,
+      executor: ALPHA.publicKey,
+      validators: [ALICE.publicKey, CAROL.publicKey, ERIN.publicKey],
+      thresholdBps: 6500,
+      amount: 400_000n,
+      taskRef: randomTaskRef(),
+      deadlineUnix: BigInt(now + 86400 * 7),
+    });
+    console.log("  ✓ campaign #5 open (fallback)");
+  }
 
   // ── Summary ─────────────────────────────────────────────────────────────────
   console.log("\n✅ Devnet seed complete");
   console.log("  #1 — OPEN (direct)         campaignId=1");
   console.log("  #2 — OPEN (RFQ)            campaignId=2");
   console.log("  #3 — SETTLED_SUCCESS       campaignId=3");
-  console.log("\nOpen the dashboard, set RPC to https://devnet.helius-rpc.com/?api-key=b539e607-6c09-4971-9115-7e8e1befc126");
+  console.log("  #4 — OPEN (5 validators)   campaignId=4");
+  console.log("  #5 — OPEN (fallback)       campaignId=5");
+  console.log(
+    "\nOpen the dashboard, set RPC to https://devnet.helius-rpc.com/?api-key=b539e607-6c09-4971-9115-7e8e1befc126",
+  );
 }
 
 main().catch((e) => {

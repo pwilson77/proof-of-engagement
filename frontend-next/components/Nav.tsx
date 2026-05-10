@@ -2,7 +2,7 @@ import NavEnvDropdown from "./NavEnvDropdown";
 
 export default function Nav() {
   return (
-    <header className="border-b border-[#133a34] bg-[#060a09]/90 backdrop-blur-sm">
+    <header className="sticky top-0 z-50 border-b border-[#133a34] bg-[#060a09]/90 backdrop-blur-sm">
       <div className="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between gap-4">
         <a
           href="/"

@@ -52,16 +52,26 @@ BALANCE=$(solana balance --url "$DEVNET_RPC" | awk '{print $1}' | cut -d. -f1)
 ok "balance: ${BALANCE} SOL"
 # Program deploy needs ~2.5 SOL for a ~220KB .so
 if [[ "${BALANCE}" -lt 3 ]]; then
-  warn "Balance low — requesting airdrop…"
-  solana airdrop 2 --url "$DEVNET_RPC" 2>&1 || true
-  sleep 4
-  solana airdrop 2 --url "$DEVNET_RPC" 2>&1 || warn "Airdrop failed or rate-limited. Fund manually: https://faucet.solana.com (address: $DEPLOYER)"
-  sleep 3
-  BALANCE=$(solana balance --url "$DEVNET_RPC" | awk '{print $1}' | cut -d. -f1)
-  if [[ "${BALANCE}" -lt 3 ]]; then
-    die "Still insufficient balance (${BALANCE} SOL). Fund the wallet manually at https://faucet.solana.com\n  Address: $DEPLOYER\n  Then rerun with: bash deploy-devnet.sh --skip-build"
+  warn "Balance low (< 3 SOL)."
+  echo ""
+  echo "  Wallet: $DEPLOYER"
+  echo "  Faucet: https://faucet.solana.com"
+  echo ""
+  read -r -p "  Attempt automatic airdrop now? [y/N] " WANT_AIRDROP
+  if [[ "${WANT_AIRDROP:-N}" =~ ^[Yy]$ ]]; then
+    warn "Requesting airdrop…"
+    solana airdrop 2 --url "$DEVNET_RPC" 2>&1 || true
+    sleep 4
+    solana airdrop 2 --url "$DEVNET_RPC" 2>&1 || warn "Airdrop failed or rate-limited."
+    sleep 3
+    BALANCE=$(solana balance --url "$DEVNET_RPC" | awk '{print $1}' | cut -d. -f1)
+    if [[ "${BALANCE}" -lt 3 ]]; then
+      die "Still insufficient balance (${BALANCE} SOL). Fund manually at https://faucet.solana.com\n  Address: $DEPLOYER\n  Then rerun with: bash deploy-devnet.sh --skip-build"
+    fi
+    ok "balance: $(solana balance --url \"$DEVNET_RPC\")"
+  else
+    die "Paused for manual funding. Add SOL via faucet and rerun with: bash deploy-devnet.sh --skip-build"
   fi
-  ok "balance: $(solana balance --url \"$DEVNET_RPC\")"
 fi
 
 # ── Build ─────────────────────────────────────────────────────────────────────
