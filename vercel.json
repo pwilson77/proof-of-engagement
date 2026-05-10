@@ -1,6 +1,7 @@
 {
-  "buildCommand": "npm --prefix packages/sdk install && npm --prefix packages/sdk run build && npm --prefix frontend-next install && npm --prefix frontend-next run build",
-  "outputDirectory": "frontend-next/.next",
+  "rootDirectory": "frontend-next",
+  "buildCommand": "npm --prefix ../packages/sdk install && npm --prefix ../packages/sdk run build && npm install && npm run build",
+  "outputDirectory": ".next",
   "installCommand": "echo 'deps installed by buildCommand'",
   "framework": "nextjs",
   "env": {
