@@ -1,0 +1,803 @@
+{
+  "schemaVersion": 1,
+  "cluster": "devnet",
+  "updatedAtUnix": 1778529823,
+  "campaigns": {
+    "B9NzVzTgoLtphziZFPKszyYX5E8duDgZK1z52c6SJnGw": {
+      "campaignPda": "B9NzVzTgoLtphziZFPKszyYX5E8duDgZK1z52c6SJnGw",
+      "creator": "3Lqu94SgJ9vEon7peFXP8L2e3HhT68Fb4Nug2X1uZik4",
+      "campaignId": "16",
+      "label": "open_direct",
+      "title": "Direct Campaign: Retweet Validation",
+      "description": "Creator pre-assigns Alpha executor and requires three independent validator scores before payout.",
+      "tags": [
+        "direct",
+        "x",
+        "engagement"
+      ],
+      "validatorDescriptions": {
+        "J8493jn6adwjhr9zTyaaqiqYqN3LgRmra3upynTfGvcc": {
+          "name": "Alice",
+          "description": "Strict scoring profile focused on evidence integrity and digest consistency."
+        },
+        "J67RvCmNFBpKRMbkWY6u4BuqxkKbZRafRxyG6Q1mk9QJ": {
+          "name": "Bob",
+          "description": "High-signal validator emphasizing engagement authenticity and anti-spoof checks."
+        },
+        "GdtExG1w2SDNxkW91gExYNzUYu5s8YmXSv5Nzco9ZNXH": {
+          "name": "Carol",
+          "description": "Conservative validator tuned for deadline windows and policy compliance."
+        }
+      }
+    },
+    "Bzsj8xYMpbRbrmAaa1VyumCfPH5k3Ujgs2p34obxX6eu": {
+      "campaignPda": "Bzsj8xYMpbRbrmAaa1VyumCfPH5k3Ujgs2p34obxX6eu",
+      "creator": "3Lqu94SgJ9vEon7peFXP8L2e3HhT68Fb4Nug2X1uZik4",
+      "campaignId": "17",
+      "label": "open_rfq",
+      "title": "RFQ Campaign: Competitive Assignment",
+      "description": "Campaign opens for bids first, then transitions to execution once a bid is accepted on-chain.",
+      "tags": [
+        "rfq",
+        "bidding",
+        "open"
+      ],
+      "validatorDescriptions": {
+        "J8493jn6adwjhr9zTyaaqiqYqN3LgRmra3upynTfGvcc": {
+          "name": "Alice",
+          "description": "Strict scoring profile focused on evidence integrity and digest consistency."
+        },
+        "CdHms4EUqrjN8BNgCrCkdnn2YDG62YczBVtGKu5PyQVg": {
+          "name": "Dave",
+          "description": "RFQ-oriented validator balancing confidence with throughput under load."
+        }
+      }
+    },
+    "AZ5do8UHq3mcPK1u2zdhTq4yHRn3S43bSgfBa33fSSEP": {
+      "campaignPda": "AZ5do8UHq3mcPK1u2zdhTq4yHRn3S43bSgfBa33fSSEP",
+      "creator": "3Lqu94SgJ9vEon7peFXP8L2e3HhT68Fb4Nug2X1uZik4",
+      "campaignId": "18",
+      "label": "settled_success_example",
+      "title": "Settled Success Reference",
+      "description": "Reference campaign with completed validator scoring and successful settlement path.",
+      "tags": [
+        "settled_success",
+        "reference",
+        "completed"
+      ],
+      "validatorDescriptions": {
+        "J67RvCmNFBpKRMbkWY6u4BuqxkKbZRafRxyG6Q1mk9QJ": {
+          "name": "Bob",
+          "description": "High-signal validator emphasizing engagement authenticity and anti-spoof checks."
+        },
+        "GdtExG1w2SDNxkW91gExYNzUYu5s8YmXSv5Nzco9ZNXH": {
+          "name": "Carol",
+          "description": "Conservative validator tuned for deadline windows and policy compliance."
+        }
+      }
+    },
+    "H2n8RTr1CAVAPV3TSGUauTnsFupXFr4PY7mjvZoPsb4e": {
+      "campaignPda": "H2n8RTr1CAVAPV3TSGUauTnsFupXFr4PY7mjvZoPsb4e",
+      "creator": "3Lqu94SgJ9vEon7peFXP8L2e3HhT68Fb4Nug2X1uZik4",
+      "campaignId": "19",
+      "label": "primary_live_demo",
+      "title": "Primary Live Demo Campaign",
+      "description": "Five-validator primary path used by run_demo live flow and consensus settlement showcase.",
+      "tags": [
+        "live_demo",
+        "primary",
+        "magicblock"
+      ],
+      "validatorDescriptions": {
+        "J8493jn6adwjhr9zTyaaqiqYqN3LgRmra3upynTfGvcc": {
+          "name": "Alice",
+          "description": "Strict scoring profile focused on evidence integrity and digest consistency."
+        },
+        "J67RvCmNFBpKRMbkWY6u4BuqxkKbZRafRxyG6Q1mk9QJ": {
+          "name": "Bob",
+          "description": "High-signal validator emphasizing engagement authenticity and anti-spoof checks."
+        },
+        "GdtExG1w2SDNxkW91gExYNzUYu5s8YmXSv5Nzco9ZNXH": {
+          "name": "Carol",
+          "description": "Conservative validator tuned for deadline windows and policy compliance."
+        },
+        "CdHms4EUqrjN8BNgCrCkdnn2YDG62YczBVtGKu5PyQVg": {
+          "name": "Dave",
+          "description": "RFQ-oriented validator balancing confidence with throughput under load."
+        },
+        "gv44WDxohr3xUQgGrSrVvc1J7Wt9PZ86i77CvyNGG2X": {
+          "name": "Erin",
+          "description": "Fallback validator optimized for resilient quorum participation."
+        }
+      }
+    },
+    "5MbScCd3RmrzFT82xbH5ZF7djgTJdXbkHVWBuBSej6L1": {
+      "campaignPda": "5MbScCd3RmrzFT82xbH5ZF7djgTJdXbkHVWBuBSej6L1",
+      "creator": "3Lqu94SgJ9vEon7peFXP8L2e3HhT68Fb4Nug2X1uZik4",
+      "campaignId": "20",
+      "label": "fallback_live_demo",
+      "title": "Fallback Live Demo Campaign",
+      "description": "Three-validator fallback path for fast quorum and resilient demo execution.",
+      "tags": [
+        "live_demo",
+        "fallback",
+        "resiliency"
+      ],
+      "validatorDescriptions": {
+        "J8493jn6adwjhr9zTyaaqiqYqN3LgRmra3upynTfGvcc": {
+          "name": "Alice",
+          "description": "Strict scoring profile focused on evidence integrity and digest consistency."
+        },
+        "GdtExG1w2SDNxkW91gExYNzUYu5s8YmXSv5Nzco9ZNXH": {
+          "name": "Carol",
+          "description": "Conservative validator tuned for deadline windows and policy compliance."
+        },
+        "gv44WDxohr3xUQgGrSrVvc1J7Wt9PZ86i77CvyNGG2X": {
+          "name": "Erin",
+          "description": "Fallback validator optimized for resilient quorum participation."
+        }
+      }
+    },
+    "7SWndUSwq9BHdWw9M6qqCFYCKP56MdPvqAufBkhsWdoN": {
+      "campaignPda": "7SWndUSwq9BHdWw9M6qqCFYCKP56MdPvqAufBkhsWdoN",
+      "creator": "3Lqu94SgJ9vEon7peFXP8L2e3HhT68Fb4Nug2X1uZik4",
+      "campaignId": "21",
+      "label": "open_direct",
+      "title": "Direct Campaign: Retweet Validation",
+      "description": "Creator pre-assigns Alpha executor and requires three independent validator scores before payout.",
+      "tags": [
+        "direct",
+        "x",
+        "engagement"
+      ],
+      "validatorDescriptions": {
+        "J8493jn6adwjhr9zTyaaqiqYqN3LgRmra3upynTfGvcc": {
+          "name": "Alice",
+          "description": "Strict scoring profile focused on evidence integrity and digest consistency."
+        },
+        "J67RvCmNFBpKRMbkWY6u4BuqxkKbZRafRxyG6Q1mk9QJ": {
+          "name": "Bob",
+          "description": "High-signal validator emphasizing engagement authenticity and anti-spoof checks."
+        },
+        "GdtExG1w2SDNxkW91gExYNzUYu5s8YmXSv5Nzco9ZNXH": {
+          "name": "Carol",
+          "description": "Conservative validator tuned for deadline windows and policy compliance."
+        }
+      }
+    },
+    "636rjdPcvzfnb4jRtHyt6NXB8395LsqbeVYNzHaH7dVq": {
+      "campaignPda": "636rjdPcvzfnb4jRtHyt6NXB8395LsqbeVYNzHaH7dVq",
+      "creator": "3Lqu94SgJ9vEon7peFXP8L2e3HhT68Fb4Nug2X1uZik4",
+      "campaignId": "22",
+      "label": "open_rfq",
+      "title": "RFQ Campaign: Competitive Assignment",
+      "description": "Campaign opens for bids first, then transitions to execution once a bid is accepted on-chain.",
+      "tags": [
+        "rfq",
+        "bidding",
+        "open"
+      ],
+      "validatorDescriptions": {
+        "J8493jn6adwjhr9zTyaaqiqYqN3LgRmra3upynTfGvcc": {
+          "name": "Alice",
+          "description": "Strict scoring profile focused on evidence integrity and digest consistency."
+        },
+        "CdHms4EUqrjN8BNgCrCkdnn2YDG62YczBVtGKu5PyQVg": {
+          "name": "Dave",
+          "description": "RFQ-oriented validator balancing confidence with throughput under load."
+        }
+      }
+    },
+    "5pFpDSUU2MADQDLvxbVmXwRaWMetX15qJ1z8vyh6oa2e": {
+      "campaignPda": "5pFpDSUU2MADQDLvxbVmXwRaWMetX15qJ1z8vyh6oa2e",
+      "creator": "3Lqu94SgJ9vEon7peFXP8L2e3HhT68Fb4Nug2X1uZik4",
+      "campaignId": "23",
+      "label": "settled_success_example",
+      "title": "Settled Success Reference",
+      "description": "Reference campaign with completed validator scoring and successful settlement path.",
+      "tags": [
+        "settled_success",
+        "reference",
+        "completed"
+      ],
+      "validatorDescriptions": {
+        "J67RvCmNFBpKRMbkWY6u4BuqxkKbZRafRxyG6Q1mk9QJ": {
+          "name": "Bob",
+          "description": "High-signal validator emphasizing engagement authenticity and anti-spoof checks."
+        },
+        "GdtExG1w2SDNxkW91gExYNzUYu5s8YmXSv5Nzco9ZNXH": {
+          "name": "Carol",
+          "description": "Conservative validator tuned for deadline windows and policy compliance."
+        }
+      }
+    },
+    "7Dmsuiw9kB4AQWCDQicwQpaooBbtyVX3FnvxSTenDYCf": {
+      "campaignPda": "7Dmsuiw9kB4AQWCDQicwQpaooBbtyVX3FnvxSTenDYCf",
+      "creator": "3Lqu94SgJ9vEon7peFXP8L2e3HhT68Fb4Nug2X1uZik4",
+      "campaignId": "24",
+      "label": "primary_live_demo",
+      "title": "Primary Live Demo Campaign",
+      "description": "Five-validator primary path used by run_demo live flow and consensus settlement showcase.",
+      "tags": [
+        "live_demo",
+        "primary",
+        "magicblock"
+      ],
+      "validatorDescriptions": {
+        "J8493jn6adwjhr9zTyaaqiqYqN3LgRmra3upynTfGvcc": {
+          "name": "Alice",
+          "description": "Strict scoring profile focused on evidence integrity and digest consistency."
+        },
+        "J67RvCmNFBpKRMbkWY6u4BuqxkKbZRafRxyG6Q1mk9QJ": {
+          "name": "Bob",
+          "description": "High-signal validator emphasizing engagement authenticity and anti-spoof checks."
+        },
+        "GdtExG1w2SDNxkW91gExYNzUYu5s8YmXSv5Nzco9ZNXH": {
+          "name": "Carol",
+          "description": "Conservative validator tuned for deadline windows and policy compliance."
+        },
+        "CdHms4EUqrjN8BNgCrCkdnn2YDG62YczBVtGKu5PyQVg": {
+          "name": "Dave",
+          "description": "RFQ-oriented validator balancing confidence with throughput under load."
+        },
+        "gv44WDxohr3xUQgGrSrVvc1J7Wt9PZ86i77CvyNGG2X": {
+          "name": "Erin",
+          "description": "Fallback validator optimized for resilient quorum participation."
+        }
+      }
+    },
+    "6TtgiCBXsJhdZkmwRk34QcnuTGwBZPyic41cAGk64MzM": {
+      "campaignPda": "6TtgiCBXsJhdZkmwRk34QcnuTGwBZPyic41cAGk64MzM",
+      "creator": "3Lqu94SgJ9vEon7peFXP8L2e3HhT68Fb4Nug2X1uZik4",
+      "campaignId": "25",
+      "label": "fallback_live_demo",
+      "title": "Fallback Live Demo Campaign",
+      "description": "Three-validator fallback path for fast quorum and resilient demo execution.",
+      "tags": [
+        "live_demo",
+        "fallback",
+        "resiliency"
+      ],
+      "validatorDescriptions": {
+        "J8493jn6adwjhr9zTyaaqiqYqN3LgRmra3upynTfGvcc": {
+          "name": "Alice",
+          "description": "Strict scoring profile focused on evidence integrity and digest consistency."
+        },
+        "GdtExG1w2SDNxkW91gExYNzUYu5s8YmXSv5Nzco9ZNXH": {
+          "name": "Carol",
+          "description": "Conservative validator tuned for deadline windows and policy compliance."
+        },
+        "gv44WDxohr3xUQgGrSrVvc1J7Wt9PZ86i77CvyNGG2X": {
+          "name": "Erin",
+          "description": "Fallback validator optimized for resilient quorum participation."
+        }
+      }
+    },
+    "38g1993HNGK28rTPvJH3a6Mz78Y5XEbkz5nYHg35QZMD": {
+      "campaignPda": "38g1993HNGK28rTPvJH3a6Mz78Y5XEbkz5nYHg35QZMD",
+      "creator": "3Lqu94SgJ9vEon7peFXP8L2e3HhT68Fb4Nug2X1uZik4",
+      "campaignId": "26",
+      "label": "open_direct",
+      "title": "Direct Campaign: Retweet Validation",
+      "description": "Creator pre-assigns Alpha executor and requires three independent validator scores before payout.",
+      "tags": [
+        "direct",
+        "x",
+        "engagement"
+      ],
+      "validatorDescriptions": {
+        "J8493jn6adwjhr9zTyaaqiqYqN3LgRmra3upynTfGvcc": {
+          "name": "Alice",
+          "description": "Strict scoring profile focused on evidence integrity and digest consistency."
+        },
+        "J67RvCmNFBpKRMbkWY6u4BuqxkKbZRafRxyG6Q1mk9QJ": {
+          "name": "Bob",
+          "description": "High-signal validator emphasizing engagement authenticity and anti-spoof checks."
+        },
+        "GdtExG1w2SDNxkW91gExYNzUYu5s8YmXSv5Nzco9ZNXH": {
+          "name": "Carol",
+          "description": "Conservative validator tuned for deadline windows and policy compliance."
+        }
+      }
+    },
+    "9Grf2eF6mJMjeRjbefjYaCfCss4yQuwwZ9S2FmoLX9G7": {
+      "campaignPda": "9Grf2eF6mJMjeRjbefjYaCfCss4yQuwwZ9S2FmoLX9G7",
+      "creator": "3Lqu94SgJ9vEon7peFXP8L2e3HhT68Fb4Nug2X1uZik4",
+      "campaignId": "27",
+      "label": "open_rfq",
+      "title": "RFQ Campaign: Competitive Assignment",
+      "description": "Campaign opens for bids first, then transitions to execution once a bid is accepted on-chain.",
+      "tags": [
+        "rfq",
+        "bidding",
+        "open"
+      ],
+      "validatorDescriptions": {
+        "J8493jn6adwjhr9zTyaaqiqYqN3LgRmra3upynTfGvcc": {
+          "name": "Alice",
+          "description": "Strict scoring profile focused on evidence integrity and digest consistency."
+        },
+        "CdHms4EUqrjN8BNgCrCkdnn2YDG62YczBVtGKu5PyQVg": {
+          "name": "Dave",
+          "description": "RFQ-oriented validator balancing confidence with throughput under load."
+        }
+      }
+    },
+    "Gzoag25xZfGCcLet8YCX1BnBdz6D3RzwHeRYRpKD9aGP": {
+      "campaignPda": "Gzoag25xZfGCcLet8YCX1BnBdz6D3RzwHeRYRpKD9aGP",
+      "creator": "3Lqu94SgJ9vEon7peFXP8L2e3HhT68Fb4Nug2X1uZik4",
+      "campaignId": "28",
+      "label": "settled_success_example",
+      "title": "Settled Success Reference",
+      "description": "Reference campaign with completed validator scoring and successful settlement path.",
+      "tags": [
+        "settled_success",
+        "reference",
+        "completed"
+      ],
+      "validatorDescriptions": {
+        "J67RvCmNFBpKRMbkWY6u4BuqxkKbZRafRxyG6Q1mk9QJ": {
+          "name": "Bob",
+          "description": "High-signal validator emphasizing engagement authenticity and anti-spoof checks."
+        },
+        "GdtExG1w2SDNxkW91gExYNzUYu5s8YmXSv5Nzco9ZNXH": {
+          "name": "Carol",
+          "description": "Conservative validator tuned for deadline windows and policy compliance."
+        }
+      }
+    },
+    "7hGeRv65WQpr3Y2diw9AGeCfTx7uwypmAtUEusoVahYy": {
+      "campaignPda": "7hGeRv65WQpr3Y2diw9AGeCfTx7uwypmAtUEusoVahYy",
+      "creator": "3Lqu94SgJ9vEon7peFXP8L2e3HhT68Fb4Nug2X1uZik4",
+      "campaignId": "29",
+      "label": "primary_live_demo",
+      "title": "Primary Live Demo Campaign",
+      "description": "Five-validator primary path used by run_demo live flow and consensus settlement showcase.",
+      "tags": [
+        "live_demo",
+        "primary",
+        "magicblock"
+      ],
+      "validatorDescriptions": {
+        "J8493jn6adwjhr9zTyaaqiqYqN3LgRmra3upynTfGvcc": {
+          "name": "Alice",
+          "description": "Strict scoring profile focused on evidence integrity and digest consistency."
+        },
+        "J67RvCmNFBpKRMbkWY6u4BuqxkKbZRafRxyG6Q1mk9QJ": {
+          "name": "Bob",
+          "description": "High-signal validator emphasizing engagement authenticity and anti-spoof checks."
+        },
+        "GdtExG1w2SDNxkW91gExYNzUYu5s8YmXSv5Nzco9ZNXH": {
+          "name": "Carol",
+          "description": "Conservative validator tuned for deadline windows and policy compliance."
+        },
+        "CdHms4EUqrjN8BNgCrCkdnn2YDG62YczBVtGKu5PyQVg": {
+          "name": "Dave",
+          "description": "RFQ-oriented validator balancing confidence with throughput under load."
+        },
+        "gv44WDxohr3xUQgGrSrVvc1J7Wt9PZ86i77CvyNGG2X": {
+          "name": "Erin",
+          "description": "Fallback validator optimized for resilient quorum participation."
+        }
+      }
+    },
+    "5PRdGcV7Y87CfXEgNb25Cpynw56wzYEY5KpK4Cdvy9eh": {
+      "campaignPda": "5PRdGcV7Y87CfXEgNb25Cpynw56wzYEY5KpK4Cdvy9eh",
+      "creator": "3Lqu94SgJ9vEon7peFXP8L2e3HhT68Fb4Nug2X1uZik4",
+      "campaignId": "30",
+      "label": "fallback_live_demo",
+      "title": "Fallback Live Demo Campaign",
+      "description": "Three-validator fallback path for fast quorum and resilient demo execution.",
+      "tags": [
+        "live_demo",
+        "fallback",
+        "resiliency"
+      ],
+      "validatorDescriptions": {
+        "J8493jn6adwjhr9zTyaaqiqYqN3LgRmra3upynTfGvcc": {
+          "name": "Alice",
+          "description": "Strict scoring profile focused on evidence integrity and digest consistency."
+        },
+        "GdtExG1w2SDNxkW91gExYNzUYu5s8YmXSv5Nzco9ZNXH": {
+          "name": "Carol",
+          "description": "Conservative validator tuned for deadline windows and policy compliance."
+        },
+        "gv44WDxohr3xUQgGrSrVvc1J7Wt9PZ86i77CvyNGG2X": {
+          "name": "Erin",
+          "description": "Fallback validator optimized for resilient quorum participation."
+        }
+      }
+    },
+    "GHjBdryiAsPMmJebyRppyyxXyombRDU5tyU3RmyPiw9W": {
+      "campaignPda": "GHjBdryiAsPMmJebyRppyyxXyombRDU5tyU3RmyPiw9W",
+      "creator": "3Lqu94SgJ9vEon7peFXP8L2e3HhT68Fb4Nug2X1uZik4",
+      "campaignId": "31",
+      "label": "single_live_demo",
+      "title": "Single Live Demo Campaign",
+      "description": "Single-campaign path for deterministic demo runs from create to settlement.",
+      "tags": [
+        "live_demo",
+        "single",
+        "e2e"
+      ],
+      "validatorDescriptions": {
+        "J8493jn6adwjhr9zTyaaqiqYqN3LgRmra3upynTfGvcc": {
+          "name": "Alice",
+          "description": "Strict scoring profile focused on evidence integrity and digest consistency."
+        },
+        "J67RvCmNFBpKRMbkWY6u4BuqxkKbZRafRxyG6Q1mk9QJ": {
+          "name": "Bob",
+          "description": "High-signal validator emphasizing engagement authenticity and anti-spoof checks."
+        },
+        "GdtExG1w2SDNxkW91gExYNzUYu5s8YmXSv5Nzco9ZNXH": {
+          "name": "Carol",
+          "description": "Conservative validator tuned for deadline windows and policy compliance."
+        }
+      }
+    },
+    "9nK3ZGoZNk7wWiDAZ8oY6C2AaEuwc9HJCGexJqiBfdar": {
+      "campaignPda": "9nK3ZGoZNk7wWiDAZ8oY6C2AaEuwc9HJCGexJqiBfdar",
+      "creator": "3Lqu94SgJ9vEon7peFXP8L2e3HhT68Fb4Nug2X1uZik4",
+      "campaignId": "32",
+      "label": "single_live_demo",
+      "title": "Repository Security Review",
+      "description": "Validate that an executor completed a Rust smart-contract security review with verifiable findings.",
+      "tags": [
+        "live_demo",
+        "single",
+        "e2e",
+        "code-review"
+      ],
+      "validatorDescriptions": {
+        "J8493jn6adwjhr9zTyaaqiqYqN3LgRmra3upynTfGvcc": {
+          "name": "Alice",
+          "description": "Strict scoring profile focused on evidence integrity and digest consistency."
+        },
+        "J67RvCmNFBpKRMbkWY6u4BuqxkKbZRafRxyG6Q1mk9QJ": {
+          "name": "Bob",
+          "description": "High-signal validator emphasizing engagement authenticity and anti-spoof checks."
+        },
+        "GdtExG1w2SDNxkW91gExYNzUYu5s8YmXSv5Nzco9ZNXH": {
+          "name": "Carol",
+          "description": "Conservative validator tuned for deadline windows and policy compliance."
+        }
+      }
+    },
+    "ERvW3mYFNSNsoR6AwNM6UsCFKGiz4pXWoaJqbFMxRt9v": {
+      "campaignPda": "ERvW3mYFNSNsoR6AwNM6UsCFKGiz4pXWoaJqbFMxRt9v",
+      "creator": "3Lqu94SgJ9vEon7peFXP8L2e3HhT68Fb4Nug2X1uZik4",
+      "campaignId": "33",
+      "label": "single_live_demo",
+      "title": "Order Fulfillment Check",
+      "description": "Validate an order or checkout flow with verifiable completion evidence.",
+      "tags": [
+        "live_demo",
+        "single",
+        "e2e",
+        "general"
+      ],
+      "validatorDescriptions": {
+        "J8493jn6adwjhr9zTyaaqiqYqN3LgRmra3upynTfGvcc": {
+          "name": "Alice",
+          "description": "Strict scoring profile focused on evidence integrity and digest consistency."
+        },
+        "J67RvCmNFBpKRMbkWY6u4BuqxkKbZRafRxyG6Q1mk9QJ": {
+          "name": "Bob",
+          "description": "High-signal validator emphasizing engagement authenticity and anti-spoof checks."
+        },
+        "GdtExG1w2SDNxkW91gExYNzUYu5s8YmXSv5Nzco9ZNXH": {
+          "name": "Carol",
+          "description": "Conservative validator tuned for deadline windows and policy compliance."
+        }
+      }
+    },
+    "8DDuLkCtoTGZDSAiiMbBSKkrET7wQa4v5mTE6zHRF1BL": {
+      "campaignPda": "8DDuLkCtoTGZDSAiiMbBSKkrET7wQa4v5mTE6zHRF1BL",
+      "creator": "3Lqu94SgJ9vEon7peFXP8L2e3HhT68Fb4Nug2X1uZik4",
+      "campaignId": "34",
+      "label": "single_live_demo",
+      "title": "General Agent Task: Proof of Completion",
+      "description": "Validate completion evidence for an assigned agent task (code, social, research, or commerce) via threshold consensus.",
+      "tags": [
+        "live_demo",
+        "single",
+        "e2e",
+        "general"
+      ],
+      "validatorDescriptions": {
+        "J8493jn6adwjhr9zTyaaqiqYqN3LgRmra3upynTfGvcc": {
+          "name": "Alice",
+          "description": "Strict scoring profile focused on evidence integrity and digest consistency."
+        },
+        "J67RvCmNFBpKRMbkWY6u4BuqxkKbZRafRxyG6Q1mk9QJ": {
+          "name": "Bob",
+          "description": "High-signal validator emphasizing engagement authenticity and anti-spoof checks."
+        },
+        "GdtExG1w2SDNxkW91gExYNzUYu5s8YmXSv5Nzco9ZNXH": {
+          "name": "Carol",
+          "description": "Conservative validator tuned for deadline windows and policy compliance."
+        }
+      }
+    },
+    "GGsm7hLZxZNeRJJ9uQaYwdiaRuRT1aSYUfjuFep1FoTL": {
+      "campaignPda": "GGsm7hLZxZNeRJJ9uQaYwdiaRuRT1aSYUfjuFep1FoTL",
+      "creator": "3Lqu94SgJ9vEon7peFXP8L2e3HhT68Fb4Nug2X1uZik4",
+      "campaignId": "35",
+      "label": "single_live_demo",
+      "title": "General Agent Task: Proof of Completion",
+      "description": "Validate that an assigned agent completed a task using verifiable evidence and threshold consensus.",
+      "tags": [
+        "live_demo",
+        "single",
+        "e2e",
+        "general"
+      ],
+      "validatorDescriptions": {
+        "J8493jn6adwjhr9zTyaaqiqYqN3LgRmra3upynTfGvcc": {
+          "name": "Alice",
+          "description": "Strict scoring profile focused on evidence integrity and digest consistency."
+        },
+        "J67RvCmNFBpKRMbkWY6u4BuqxkKbZRafRxyG6Q1mk9QJ": {
+          "name": "Bob",
+          "description": "High-signal validator emphasizing engagement authenticity and anti-spoof checks."
+        },
+        "GdtExG1w2SDNxkW91gExYNzUYu5s8YmXSv5Nzco9ZNXH": {
+          "name": "Carol",
+          "description": "Conservative validator tuned for deadline windows and policy compliance."
+        }
+      }
+    },
+    "7kSHEP6TVTh8o7m62QWCuUzW7sFunNNeJ8zC35WoVvww": {
+      "campaignPda": "7kSHEP6TVTh8o7m62QWCuUzW7sFunNNeJ8zC35WoVvww",
+      "creator": "3Lqu94SgJ9vEon7peFXP8L2e3HhT68Fb4Nug2X1uZik4",
+      "campaignId": "36",
+      "label": "single_live_demo",
+      "title": "General Agent Task: Proof of Completion",
+      "description": "Validate completion evidence for an assigned agent task (code, social, research, or commerce) via threshold consensus.",
+      "tags": [
+        "live_demo",
+        "single",
+        "e2e",
+        "general"
+      ],
+      "validatorDescriptions": {
+        "J8493jn6adwjhr9zTyaaqiqYqN3LgRmra3upynTfGvcc": {
+          "name": "Alice",
+          "description": "Strict scoring profile focused on evidence integrity and digest consistency."
+        },
+        "J67RvCmNFBpKRMbkWY6u4BuqxkKbZRafRxyG6Q1mk9QJ": {
+          "name": "Bob",
+          "description": "High-signal validator emphasizing engagement authenticity and anti-spoof checks."
+        },
+        "GdtExG1w2SDNxkW91gExYNzUYu5s8YmXSv5Nzco9ZNXH": {
+          "name": "Carol",
+          "description": "Conservative validator tuned for deadline windows and policy compliance."
+        }
+      }
+    },
+    "9U9DCT9iWrmgDDZBwbXQoT6vVKD198dHKSFva4Cth3Ph": {
+      "campaignPda": "9U9DCT9iWrmgDDZBwbXQoT6vVKD198dHKSFva4Cth3Ph",
+      "creator": "3Lqu94SgJ9vEon7peFXP8L2e3HhT68Fb4Nug2X1uZik4",
+      "campaignId": "37",
+      "label": "single_live_demo",
+      "title": "General Agent Task: Proof of Completion",
+      "description": "Validate completion evidence for an assigned agent task (code, social, research, or commerce) via threshold consensus.",
+      "tags": [
+        "live_demo",
+        "single",
+        "e2e",
+        "general"
+      ],
+      "validatorDescriptions": {
+        "J8493jn6adwjhr9zTyaaqiqYqN3LgRmra3upynTfGvcc": {
+          "name": "Alice",
+          "description": "Strict scoring profile focused on evidence integrity and digest consistency."
+        },
+        "J67RvCmNFBpKRMbkWY6u4BuqxkKbZRafRxyG6Q1mk9QJ": {
+          "name": "Bob",
+          "description": "High-signal validator emphasizing engagement authenticity and anti-spoof checks."
+        },
+        "GdtExG1w2SDNxkW91gExYNzUYu5s8YmXSv5Nzco9ZNXH": {
+          "name": "Carol",
+          "description": "Conservative validator tuned for deadline windows and policy compliance."
+        }
+      }
+    },
+    "5mNDDzp9xiQSPmzKrGwuh18ieqH2tpVNoGF18uxBzWDP": {
+      "campaignPda": "5mNDDzp9xiQSPmzKrGwuh18ieqH2tpVNoGF18uxBzWDP",
+      "creator": "3Lqu94SgJ9vEon7peFXP8L2e3HhT68Fb4Nug2X1uZik4",
+      "campaignId": "38",
+      "label": "single_live_demo",
+      "title": "General Agent Task: Proof of Completion",
+      "description": "Validate that an assigned agent completed a task using verifiable evidence and threshold consensus.",
+      "tags": [
+        "live_demo",
+        "single",
+        "e2e",
+        "general"
+      ],
+      "validatorDescriptions": {
+        "J8493jn6adwjhr9zTyaaqiqYqN3LgRmra3upynTfGvcc": {
+          "name": "Alice",
+          "description": "Strict scoring profile focused on evidence integrity and digest consistency."
+        },
+        "J67RvCmNFBpKRMbkWY6u4BuqxkKbZRafRxyG6Q1mk9QJ": {
+          "name": "Bob",
+          "description": "High-signal validator emphasizing engagement authenticity and anti-spoof checks."
+        },
+        "GdtExG1w2SDNxkW91gExYNzUYu5s8YmXSv5Nzco9ZNXH": {
+          "name": "Carol",
+          "description": "Conservative validator tuned for deadline windows and policy compliance."
+        }
+      }
+    },
+    "4iFrX4PPXPhdnyizMhJsEpFyK7A34fqY3PG7caa128qH": {
+      "campaignPda": "4iFrX4PPXPhdnyizMhJsEpFyK7A34fqY3PG7caa128qH",
+      "creator": "3Lqu94SgJ9vEon7peFXP8L2e3HhT68Fb4Nug2X1uZik4",
+      "campaignId": "39",
+      "label": "single_live_demo",
+      "title": "General Agent Task: Proof of Completion",
+      "description": "Validate that an assigned agent completed a task using verifiable evidence and threshold consensus.",
+      "tags": [
+        "live_demo",
+        "single",
+        "e2e",
+        "general"
+      ],
+      "validatorDescriptions": {
+        "J8493jn6adwjhr9zTyaaqiqYqN3LgRmra3upynTfGvcc": {
+          "name": "Alice",
+          "description": "Strict scoring profile focused on evidence integrity and digest consistency."
+        },
+        "J67RvCmNFBpKRMbkWY6u4BuqxkKbZRafRxyG6Q1mk9QJ": {
+          "name": "Bob",
+          "description": "High-signal validator emphasizing engagement authenticity and anti-spoof checks."
+        },
+        "GdtExG1w2SDNxkW91gExYNzUYu5s8YmXSv5Nzco9ZNXH": {
+          "name": "Carol",
+          "description": "Conservative validator tuned for deadline windows and policy compliance."
+        }
+      }
+    },
+    "Ba6JrkJiGQzyR1xpu6Xbz2oMXqmg3vmWnK7CDLhz41SV": {
+      "campaignPda": "Ba6JrkJiGQzyR1xpu6Xbz2oMXqmg3vmWnK7CDLhz41SV",
+      "creator": "3Lqu94SgJ9vEon7peFXP8L2e3HhT68Fb4Nug2X1uZik4",
+      "campaignId": "40",
+      "label": "single_live_demo",
+      "title": "General Agent Task: Proof of Completion",
+      "description": "Validate that an assigned agent completed a task using verifiable evidence and threshold consensus.",
+      "tags": [
+        "live_demo",
+        "single",
+        "e2e",
+        "general"
+      ],
+      "validatorDescriptions": {
+        "J8493jn6adwjhr9zTyaaqiqYqN3LgRmra3upynTfGvcc": {
+          "name": "Alice",
+          "description": "Strict scoring profile focused on evidence integrity and digest consistency."
+        },
+        "J67RvCmNFBpKRMbkWY6u4BuqxkKbZRafRxyG6Q1mk9QJ": {
+          "name": "Bob",
+          "description": "High-signal validator emphasizing engagement authenticity and anti-spoof checks."
+        },
+        "GdtExG1w2SDNxkW91gExYNzUYu5s8YmXSv5Nzco9ZNXH": {
+          "name": "Carol",
+          "description": "Conservative validator tuned for deadline windows and policy compliance."
+        }
+      }
+    },
+    "BSuFeSJbgiXuw3WmxJyDW8LvdzPcCcimoG9Uqa4PY9AN": {
+      "campaignPda": "BSuFeSJbgiXuw3WmxJyDW8LvdzPcCcimoG9Uqa4PY9AN",
+      "creator": "3Lqu94SgJ9vEon7peFXP8L2e3HhT68Fb4Nug2X1uZik4",
+      "campaignId": "41",
+      "label": "single_live_demo",
+      "title": "General Agent Task: Proof of Completion",
+      "description": "Validate that an assigned agent completed a task using verifiable evidence and threshold consensus.",
+      "tags": [
+        "live_demo",
+        "single",
+        "e2e",
+        "general"
+      ],
+      "validatorDescriptions": {
+        "J8493jn6adwjhr9zTyaaqiqYqN3LgRmra3upynTfGvcc": {
+          "name": "Alice",
+          "description": "Strict scoring profile focused on evidence integrity and digest consistency."
+        },
+        "J67RvCmNFBpKRMbkWY6u4BuqxkKbZRafRxyG6Q1mk9QJ": {
+          "name": "Bob",
+          "description": "High-signal validator emphasizing engagement authenticity and anti-spoof checks."
+        },
+        "GdtExG1w2SDNxkW91gExYNzUYu5s8YmXSv5Nzco9ZNXH": {
+          "name": "Carol",
+          "description": "Conservative validator tuned for deadline windows and policy compliance."
+        }
+      }
+    },
+    "Dsj6rQTToDAQ2MyFRb8Ahy6x2b1K9MzjXtnRqPPbNyZZ": {
+      "campaignPda": "Dsj6rQTToDAQ2MyFRb8Ahy6x2b1K9MzjXtnRqPPbNyZZ",
+      "creator": "3Lqu94SgJ9vEon7peFXP8L2e3HhT68Fb4Nug2X1uZik4",
+      "campaignId": "42",
+      "label": "single_live_demo",
+      "title": "General Agent Task: Proof of Completion",
+      "description": "Validate completion evidence for an assigned agent task (code, social, research, or commerce) via threshold consensus.",
+      "tags": [
+        "live_demo",
+        "single",
+        "e2e",
+        "general"
+      ],
+      "validatorDescriptions": {
+        "J8493jn6adwjhr9zTyaaqiqYqN3LgRmra3upynTfGvcc": {
+          "name": "Alice",
+          "description": "Strict scoring profile focused on evidence integrity and digest consistency."
+        },
+        "J67RvCmNFBpKRMbkWY6u4BuqxkKbZRafRxyG6Q1mk9QJ": {
+          "name": "Bob",
+          "description": "High-signal validator emphasizing engagement authenticity and anti-spoof checks."
+        },
+        "GdtExG1w2SDNxkW91gExYNzUYu5s8YmXSv5Nzco9ZNXH": {
+          "name": "Carol",
+          "description": "Conservative validator tuned for deadline windows and policy compliance."
+        }
+      }
+    },
+    "A4W8MTrcGKrRvhNLDHCGWUyLejVwRiVVy6hdHyZKCTok": {
+      "campaignPda": "A4W8MTrcGKrRvhNLDHCGWUyLejVwRiVVy6hdHyZKCTok",
+      "creator": "3Lqu94SgJ9vEon7peFXP8L2e3HhT68Fb4Nug2X1uZik4",
+      "campaignId": "43",
+      "label": "single_live_demo",
+      "title": "Repository Security Review",
+      "description": "Validate that an executor completed a Rust smart-contract security review and produced verifiable findings.",
+      "tags": [
+        "live_demo",
+        "single",
+        "e2e",
+        "general"
+      ],
+      "validatorDescriptions": {
+        "J8493jn6adwjhr9zTyaaqiqYqN3LgRmra3upynTfGvcc": {
+          "name": "Alice",
+          "description": "Strict scoring profile focused on evidence integrity and digest consistency."
+        },
+        "J67RvCmNFBpKRMbkWY6u4BuqxkKbZRafRxyG6Q1mk9QJ": {
+          "name": "Bob",
+          "description": "High-signal validator emphasizing engagement authenticity and anti-spoof checks."
+        },
+        "GdtExG1w2SDNxkW91gExYNzUYu5s8YmXSv5Nzco9ZNXH": {
+          "name": "Carol",
+          "description": "Conservative validator tuned for deadline windows and policy compliance."
+        }
+      }
+    },
+    "B7cFFZbfxtMKPuhXMBEaoBc84Ffs6GfSd7xJ5dyiqCQ7": {
+      "campaignPda": "B7cFFZbfxtMKPuhXMBEaoBc84Ffs6GfSd7xJ5dyiqCQ7",
+      "creator": "3Lqu94SgJ9vEon7peFXP8L2e3HhT68Fb4Nug2X1uZik4",
+      "campaignId": "44",
+      "label": "single_live_demo",
+      "title": "Repository Security Review",
+      "description": "Validate that an executor completed a Rust smart-contract security review and produced verifiable findings.",
+      "tags": [
+        "live_demo",
+        "single",
+        "e2e",
+        "general"
+      ],
+      "validatorDescriptions": {
+        "J8493jn6adwjhr9zTyaaqiqYqN3LgRmra3upynTfGvcc": {
+          "name": "Alice",
+          "description": "Strict scoring profile focused on evidence integrity and digest consistency."
+        },
+        "J67RvCmNFBpKRMbkWY6u4BuqxkKbZRafRxyG6Q1mk9QJ": {
+          "name": "Bob",
+          "description": "High-signal validator emphasizing engagement authenticity and anti-spoof checks."
+        },
+        "GdtExG1w2SDNxkW91gExYNzUYu5s8YmXSv5Nzco9ZNXH": {
+          "name": "Carol",
+          "description": "Conservative validator tuned for deadline windows and policy compliance."
+        }
+      }
+    }
+  }
+}

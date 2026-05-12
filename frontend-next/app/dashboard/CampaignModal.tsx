@@ -2,7 +2,14 @@
 
 import { useEffect } from "react";
 import { type CampaignStatusLabel } from "@poe/sdk";
-import { AddrLink, type Cluster, fmtBps, fmtUnix } from "@/lib/solana-utils";
+import {
+  AddrLink,
+  type Cluster,
+  fmtBps,
+  fmtUnix,
+  short,
+  txUrl,
+} from "@/lib/solana-utils";
 import { BADGE } from "./CampaignsPanel";
 
 // ---------------------------------------------------------------------------
@@ -15,6 +22,7 @@ export interface ModalCampaignRow {
   campaignStatus: CampaignStatusLabel;
   // validator-specific
   scoreBps?: number;
+  voteTxSig?: string;
   // executor-specific
   amount?: bigint;
   thresholdBps?: number;
@@ -97,6 +105,9 @@ export default function CampaignModal({
                   {mode === "validator" && (
                     <th className="pb-3 font-normal text-right pr-4">Score</th>
                   )}
+                  {mode === "validator" && (
+                    <th className="pb-3 font-normal pr-4">Vote Tx</th>
+                  )}
                   {mode === "executor" && (
                     <>
                       <th className="pb-3 font-normal text-right pr-4">
@@ -130,6 +141,23 @@ export default function CampaignModal({
                         <span className="font-mono text-[#e5faf4]">
                           {fmtBps(r.scoreBps)}
                         </span>
+                      </td>
+                    )}
+                    {mode === "validator" && (
+                      <td className="py-2.5 pr-4">
+                        {r.voteTxSig ? (
+                          <a
+                            href={txUrl(r.voteTxSig, cluster)}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-1 font-mono text-[#2af1c3] hover:text-white hover:underline"
+                            title={r.voteTxSig}
+                          >
+                            {short(r.voteTxSig)}
+                          </a>
+                        ) : (
+                          <span className="text-[#78988f]">—</span>
+                        )}
                       </td>
                     )}
                     {mode === "executor" && (

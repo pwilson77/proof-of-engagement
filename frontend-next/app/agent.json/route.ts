@@ -27,7 +27,8 @@ export async function GET() {
       dashboard: "https://frontend-next-opal-chi.vercel.app/dashboard",
     },
     proof: {
-      milestone: "Top 20 finalist out of 196 builds in the four.meme AI Hackathon",
+      milestone:
+        "Top 20 finalist out of 196 builds in the four.meme AI Hackathon",
     },
     updatedAt: new Date().toISOString(),
   });

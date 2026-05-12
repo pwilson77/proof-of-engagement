@@ -1,7 +1,12 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { PoeClient, type CampaignStatusLabel } from "@poe/sdk";
+import { Connection } from "@solana/web3.js";
+import {
+  PoeClient,
+  findValidatorScorePda,
+  type CampaignStatusLabel,
+} from "@poe/sdk";
 import { AddrLink, type Cluster, fmtBps, short } from "@/lib/solana-utils";
 import { BADGE, type ParsedCampaign } from "./CampaignsPanel";
 import CampaignModal, { type ModalCampaignRow } from "./CampaignModal";
@@ -15,6 +20,7 @@ interface ReviewEntry {
   campaignPda: string;
   scoreBps: number;
   campaignStatus: CampaignStatusLabel;
+  voteTxSig?: string;
 }
 
 interface ValidatorRow {
@@ -29,6 +35,7 @@ function useValidators(
   campaigns: ParsedCampaign[],
   poeClient: PoeClient | null,
   connected: boolean,
+  rpcUrl: string,
 ): { validators: ValidatorRow[]; loading: boolean; statusMsg: string } {
   const [validators, setValidators] = useState<ValidatorRow[]>([]);
   const [loading, setLoading] = useState(false);
@@ -45,6 +52,7 @@ function useValidators(
     setStatusMsg("Building validator index…");
 
     (async () => {
+      const conn = new Connection(rpcUrl, "confirmed");
       const map = new Map<string, ReviewEntry[]>();
 
       for (const item of campaigns) {
@@ -57,6 +65,19 @@ function useValidators(
           );
           for (const s of result.scores) {
             const vk = s.validator.toBase58();
+            let voteTxSig: string | undefined;
+            try {
+              const [scorePda] = await findValidatorScorePda(
+                item.pda,
+                s.validator,
+              );
+              const sigs = await conn.getSignaturesForAddress(scorePda, {
+                limit: 1,
+              });
+              voteTxSig = sigs[0]?.signature;
+            } catch {
+              // keep modal usable even if signature lookup fails
+            }
             if (!map.has(vk)) map.set(vk, []);
             map.get(vk)!.push({
               campaignId: item.acct.campaignId,
@@ -64,6 +85,7 @@ function useValidators(
               campaignPda: item.pda.toBase58(),
               scoreBps: s.scoreBps,
               campaignStatus: item.status,
+              voteTxSig,
             });
           }
         } catch {
@@ -89,7 +111,7 @@ function useValidators(
     return () => {
       cancelled = true;
     };
-  }, [campaigns, poeClient, connected]);
+  }, [campaigns, poeClient, connected, rpcUrl]);
 
   return { validators, loading, statusMsg };
 }
@@ -215,6 +237,7 @@ export interface ValidatorsPanelProps {
   poeClient: PoeClient | null;
   connected: boolean;
   cluster: Cluster;
+  rpcUrl: string;
 }
 
 export default function ValidatorsPanel({
@@ -222,11 +245,13 @@ export default function ValidatorsPanel({
   poeClient,
   connected,
   cluster,
+  rpcUrl,
 }: ValidatorsPanelProps) {
   const { validators, loading, statusMsg } = useValidators(
     campaigns,
     poeClient,
     connected,
+    rpcUrl,
   );
   const [search, setSearch] = useState("");
   const [modalRow, setModalRow] = useState<ValidatorRow | null>(null);
@@ -244,6 +269,7 @@ export default function ValidatorsPanel({
         campaignPda: r.campaignPda,
         campaignStatus: r.campaignStatus,
         scoreBps: r.scoreBps,
+        voteTxSig: r.voteTxSig,
       }))
     : [];
 

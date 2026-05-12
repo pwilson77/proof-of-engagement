@@ -1,18 +1,20 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { Connection, Keypair, PublicKey } from "@solana/web3.js";
 import {
   PoeClient,
   PROGRAM_ID,
-  CAMPAIGN_MODE,
   deserializeCampaign,
   statusLabel,
 } from "@poe/sdk";
 import { type Cluster, detectCluster } from "@/lib/solana-utils";
 import { sha256 } from "@noble/hashes/sha2.js";
-import CampaignsPanel, { type ParsedCampaign } from "./CampaignsPanel";
+import CampaignsPanel, {
+  type CampaignUiMetadata,
+  type ParsedCampaign,
+} from "./CampaignsPanel";
 import ValidatorsPanel from "./ValidatorsPanel";
 import ExecutorsPanel from "./ExecutorsPanel";
 
@@ -44,100 +46,21 @@ function withTimeout<T>(
   }) as Promise<T>;
 }
 
-// ---------------------------------------------------------------------------
-// Mock data (shown until a real RPC is connected)
-// ---------------------------------------------------------------------------
-const _pk = (seed: number) => new PublicKey(new Uint8Array(32).fill(seed));
-const _b32 = (n: number) => new Uint8Array(32).fill(n);
-const _now = () => Math.floor(Date.now() / 1000);
-
-const MOCK_CAMPAIGNS: ParsedCampaign[] = [
-  {
-    pda: _pk(10),
-    status: "open",
-    acct: {
-      campaignId: 42n,
-      creator: _pk(1),
-      executor: _pk(2),
-      mint: _pk(3),
-      escrowTokenAccount: _pk(4),
-      amount: 5_000_000n,
-      taskRef: _b32(0xab),
-      validatorSetHash: _b32(0xcd),
-      validatorCount: 3,
-      thresholdBps: 7000,
-      deadlineUnix: BigInt(_now() + 86400),
-      status: 0,
-      createdAtUnix: BigInt(_now() - 3600),
-      bump: 254,
-      mode: CAMPAIGN_MODE.DIRECT,
-      rfqDeadlineUnix: 0n,
-      acceptedBidId: 0n,
-    },
-    mockScores: [
-      { validator: _pk(20).toBase58(), scoreBps: 8200 },
-      { validator: _pk(21).toBase58(), scoreBps: 7500 },
-      { validator: _pk(22).toBase58(), scoreBps: 9100 },
-    ],
-  },
-  {
-    pda: _pk(11),
-    status: "settled_success",
-    acct: {
-      campaignId: 41n,
-      creator: _pk(1),
-      executor: _pk(5),
-      mint: _pk(3),
-      escrowTokenAccount: _pk(6),
-      amount: 2_000_000n,
-      taskRef: _b32(0xef),
-      validatorSetHash: _b32(0x12),
-      validatorCount: 3,
-      thresholdBps: 6000,
-      deadlineUnix: BigInt(_now() - 7200),
-      status: 1,
-      createdAtUnix: BigInt(_now() - 86400),
-      bump: 253,
-      mode: CAMPAIGN_MODE.DIRECT,
-      rfqDeadlineUnix: 0n,
-      acceptedBidId: 0n,
-    },
-    mockScores: [
-      { validator: _pk(20).toBase58(), scoreBps: 8800 },
-      { validator: _pk(21).toBase58(), scoreBps: 7200 },
-      { validator: _pk(22).toBase58(), scoreBps: 9000 },
-    ],
-  },
-  {
-    pda: _pk(12),
-    status: "settled_refund",
-    acct: {
-      campaignId: 37n,
-      creator: _pk(7),
-      executor: _pk(8),
-      mint: _pk(3),
-      escrowTokenAccount: _pk(9),
-      amount: 10_000_000n,
-      taskRef: _b32(0x34),
-      validatorSetHash: _b32(0x56),
-      validatorCount: 5,
-      thresholdBps: 8000,
-      deadlineUnix: BigInt(_now() - 14400),
-      status: 2,
-      createdAtUnix: BigInt(_now() - 172800),
-      bump: 252,
-      mode: CAMPAIGN_MODE.DIRECT,
-      rfqDeadlineUnix: 0n,
-      acceptedBidId: 0n,
-    },
-    mockScores: [],
-  },
-];
+const DEFAULT_RPC_URL =
+  process.env.NEXT_PUBLIC_RPC_URL ??
+  "https://devnet.helius-rpc.com/?api-key=b539e607-6c09-4971-9115-7e8e1befc126";
 
 // ---------------------------------------------------------------------------
 // Sidebar tab definitions
 // ---------------------------------------------------------------------------
 type Tab = "campaigns" | "validators" | "executors";
+
+type MetadataDocument = {
+  schemaVersion?: number;
+  cluster?: string;
+  updatedAtUnix?: number;
+  campaigns?: Record<string, CampaignUiMetadata>;
+};
 
 const TABS: { id: Tab; label: string; icon: string }[] = [
   { id: "campaigns", label: "Campaigns", icon: "◈" },
@@ -152,20 +75,42 @@ export default function DashboardClient() {
   const searchParams = useSearchParams();
   const rpcFromUrl = searchParams.get("rpc");
 
-  const [rpcUrl, setRpcUrl] = useState(rpcFromUrl ?? "http://127.0.0.1:8899");
+  const [rpcUrl, setRpcUrl] = useState(rpcFromUrl ?? DEFAULT_RPC_URL);
   const [status, setStatus] = useState("");
   const [connected, setConnected] = useState(false);
   const [connecting, setConnecting] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [campaigns, setCampaigns] = useState<ParsedCampaign[]>(MOCK_CAMPAIGNS);
-  const [isDemo, setIsDemo] = useState(false);
+  const [campaigns, setCampaigns] = useState<ParsedCampaign[]>([]);
   const [activeTab, setActiveTab] = useState<Tab>("campaigns");
   const connectionRef = useRef<Connection | null>(null);
   const payerRef = useRef<Keypair | null>(null);
   const connectAttemptRef = useRef(0);
   const [poeClient, setPoeClient] = useState<PoeClient | null>(null);
+  const [campaignMetadata, setCampaignMetadata] = useState<
+    Record<string, CampaignUiMetadata>
+  >({});
 
   const cluster: Cluster = detectCluster(rpcUrl);
+
+  const lookupCampaignMetadata = useCallback(
+    (item: ParsedCampaign): CampaignUiMetadata | undefined => {
+      const pda = item.pda.toBase58();
+      const direct = campaignMetadata[pda];
+      if (direct) return direct;
+
+      const creator = item.acct.creator.toBase58();
+      const campaignId = item.acct.campaignId.toString();
+      return Object.values(campaignMetadata).find(
+        (m) => m.creator === creator && m.campaignId === campaignId,
+      );
+    },
+    [campaignMetadata],
+  );
+
+  const enrichedCampaigns = useMemo(
+    () => campaigns.map((c) => ({ ...c, metadata: lookupCampaignMetadata(c) })),
+    [campaigns, lookupCampaignMetadata],
+  );
 
   const loadCampaigns = useCallback(
     async (conn: Connection, client: PoeClient) => {
@@ -191,7 +136,6 @@ export default function DashboardClient() {
           })
           .sort((a, b) => (a.acct.campaignId < b.acct.campaignId ? 1 : -1));
         setCampaigns(parsed);
-        setIsDemo(false);
       } catch (e: unknown) {
         setStatus(
           `Failed to fetch campaigns: ${e instanceof Error ? e.message : String(e)}`,
@@ -236,25 +180,44 @@ export default function DashboardClient() {
     [rpcUrl, loadCampaigns],
   );
 
-  // Auto-connect when ?rpc= param changes
+  // Auto-connect: use URL override when present, otherwise default to devnet.
   useEffect(() => {
-    if (!rpcFromUrl) {
-      connectAttemptRef.current += 1;
-      setCampaigns(MOCK_CAMPAIGNS);
-      setIsDemo(true);
-      setConnected(false);
-      setConnecting(false);
-      setLoading(false);
-      setStatus("");
-      connectionRef.current = null;
-      setPoeClient(null);
-      setRpcUrl("http://127.0.0.1:8899");
-      return;
-    }
-    setRpcUrl(rpcFromUrl);
-    const id = setTimeout(() => connectAndLoad(rpcFromUrl), 50);
+    const targetRpc = rpcFromUrl ?? DEFAULT_RPC_URL;
+    setRpcUrl(targetRpc);
+    const id = setTimeout(() => connectAndLoad(targetRpc), 50);
     return () => clearTimeout(id);
   }, [rpcFromUrl, connectAndLoad]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    if (cluster !== "devnet") {
+      setCampaignMetadata({});
+      return;
+    }
+
+    (async () => {
+      // Try the runtime API route first (reads from Vercel Blob when deployed).
+      // Falls back to the static public file for local dev without blob configured.
+      const sources = ["/api/metadata", "/campaign-metadata.devnet.json"];
+      for (const src of sources) {
+        try {
+          const res = await fetch(src, { cache: "no-store" });
+          if (!res.ok) continue;
+          const doc = (await res.json()) as MetadataDocument;
+          if (!cancelled) setCampaignMetadata(doc.campaigns ?? {});
+          return;
+        } catch {
+          // try next source
+        }
+      }
+      if (!cancelled) setCampaignMetadata({});
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [cluster]);
 
   return (
     <div className="max-w-6xl mx-auto px-4 py-6 flex flex-col gap-5 w-full">
@@ -337,12 +300,12 @@ export default function DashboardClient() {
         <main className="flex-1 min-w-0">
           {activeTab === "campaigns" && (
             <CampaignsPanel
-              campaigns={campaigns}
+              campaigns={enrichedCampaigns}
               loading={loading}
               connected={connected}
               poeClient={poeClient}
               cluster={cluster}
-              isDemo={isDemo}
+              rpcUrl={rpcUrl}
               onRefresh={() =>
                 poeClient &&
                 connectionRef.current &&
@@ -352,15 +315,16 @@ export default function DashboardClient() {
           )}
           {activeTab === "validators" && (
             <ValidatorsPanel
-              campaigns={campaigns}
+              campaigns={enrichedCampaigns}
               poeClient={poeClient}
               connected={connected}
               cluster={cluster}
+              rpcUrl={rpcUrl}
             />
           )}
           {activeTab === "executors" && (
             <ExecutorsPanel
-              campaigns={campaigns}
+              campaigns={enrichedCampaigns}
               connected={connected}
               cluster={cluster}
             />

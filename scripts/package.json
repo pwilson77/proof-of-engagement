@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "demo": "tsx demo.ts",
+    "live-demo": "tsx live-demo.ts",
     "manual:live": "tsx manual-live.ts",
     "seed:local": "tsx seed-local.ts",
     "init:config": "tsx init-config.ts",

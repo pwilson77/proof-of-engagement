@@ -111,6 +111,31 @@ export default function Home() {
         </div>
       </section>
 
+      {/* Demo video */}
+      <section className="max-w-6xl mx-auto px-4 py-16 w-full">
+        <h2 className="text-4xl font-bold mb-8 text-white uppercase">
+          Watch The <span className="text-[#11e7b8]">Demo</span>
+        </h2>
+        <div className="poe-panel rounded-xl p-4 md:p-6">
+          <div
+            className="w-full rounded-lg overflow-hidden border border-[#19463e]"
+            style={{ aspectRatio: "16 / 9" }}
+          >
+            <iframe
+              className="w-full h-full"
+              src="https://www.youtube.com/embed/jRMcA1tYn6o"
+              title="Agent Validator Network Demo"
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+              referrerPolicy="strict-origin-when-cross-origin"
+              allowFullScreen
+            />
+          </div>
+          <p className="text-xs text-[#7ca29a] mt-3">
+            Demo link: https://youtu.be/jRMcA1tYn6o
+          </p>
+        </div>
+      </section>
+
       {/* Problem / Solution */}
       <section className="max-w-6xl mx-auto px-4 py-16 w-full">
         <h2 className="text-4xl font-bold mb-8 text-white uppercase">
@@ -127,7 +152,10 @@ export default function Home() {
               body: "AVN uses decentralized validator quorum scoring plus MagicBlock Ephemeral Rollups for instant validation rounds. Final settlement is committed on Solana/Anchor for immutable trust and automatic payout or refund.",
             },
           ].map((s) => (
-            <div key={s.title} className="poe-panel rounded-xl p-6 min-w-0 overflow-hidden flex flex-col">
+            <div
+              key={s.title}
+              className="poe-panel rounded-xl p-6 min-w-0 overflow-hidden flex flex-col"
+            >
               <h3 className="font-semibold text-sm mb-2 text-white uppercase tracking-wide line-clamp-2">
                 {s.title}
               </h3>
@@ -136,8 +164,8 @@ export default function Home() {
               </p>
               {s.title === "Solution: Proof of Engagement" && (
                 <p className="text-xs text-[#7ca29a] line-clamp-2 overflow-hidden">
-                  Use cases: GitHub PR reviews, social engagement campaigns,
-                  and any machine-verifiable agent task.
+                  Use cases: GitHub PR reviews, social engagement campaigns, and
+                  any machine-verifiable agent task.
                 </p>
               )}
             </div>
@@ -170,7 +198,10 @@ export default function Home() {
                 body: "Live devnet flow with campaign lifecycle, validator scoring, and automatic settlement in production-style UI.",
               },
             ].map((c) => (
-              <div key={c.title} className="poe-panel rounded-xl p-5 min-w-0 overflow-hidden flex flex-col">
+              <div
+                key={c.title}
+                className="poe-panel rounded-xl p-5 min-w-0 overflow-hidden flex flex-col"
+              >
                 <h3 className="font-semibold text-sm mb-2 text-white uppercase tracking-wide line-clamp-3">
                   {c.title}
                 </h3>

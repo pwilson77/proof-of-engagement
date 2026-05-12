@@ -756,6 +756,7 @@ export class PoeClient {
   }): Promise<TxReceipt> {
     const { erConnection, campaignId, creator, score } = params;
     const [campaignPda] = await findCampaignPda(creator, campaignId);
+    const [validatorSetPda] = await findValidatorSetPda(creator, campaignId);
     const [scorePda] = await findValidatorScorePda(
       campaignPda,
       this.payer.publicKey,
@@ -764,7 +765,7 @@ export class PoeClient {
     const data = Buffer.concat([
       disc,
       encodeU64LE(campaignId),
-      Buffer.from([score]),
+      encodeU16LE(score),
     ]);
 
     const ix = new TransactionInstruction({
@@ -772,6 +773,7 @@ export class PoeClient {
       keys: [
         { pubkey: this.payer.publicKey, isSigner: true, isWritable: true },
         { pubkey: campaignPda, isSigner: false, isWritable: true },
+        { pubkey: validatorSetPda, isSigner: false, isWritable: false },
         { pubkey: scorePda, isSigner: false, isWritable: true },
         { pubkey: SystemProgram.programId, isSigner: false, isWritable: false },
       ],
@@ -784,6 +786,15 @@ export class PoeClient {
       skipPreflight: true,
     });
     await erConnection.confirmTransaction(sig, "confirmed");
+    const status = await erConnection.getSignatureStatuses([sig], {
+      searchTransactionHistory: true,
+    });
+    const err = status.value[0]?.err;
+    if (err) {
+      throw new Error(
+        `submit_validator_score failed for campaign ${campaignId}: ${JSON.stringify(err)}`,
+      );
+    }
     return { txSignature: sig, confirmedAtUnix: Math.floor(Date.now() / 1000) };
   }
 }

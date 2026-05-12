@@ -1,0 +1,87 @@
+{
+  "generatedAt": "2026-05-11T20:06:57.917Z",
+  "campaignId": "44",
+  "campaignTitle": "Repository Security Review",
+  "campaignCategory": "general",
+  "campaignBrief": "Validate that an executor completed a Rust smart-contract security review and produced verifiable findings.",
+  "taskRefHex": "abababababababababababababababababababababababababababababababab",
+  "rpcEndpoint": "https://devnet.helius-rpc.com/?api-key=b539e607-6c09-4971-9115-7e8e1befc126",
+  "erEndpoint": "https://devnet.magicblock.app",
+  "erExplorerLinks": [],
+  "executor": {
+    "pubkey": "HS6fkTF7HnBxzaEgHz2j8ohogpVugFH18aehbX3ZmZRJ",
+    "sig": "ir949WhppmRc1m51naXK5trN5cQPoub5A8t9WCdGRksFPtmSvAEJTTmZffwxvuakFbahBwsTFcipSZViTvqRpaQ",
+    "submittedAtUnix": 1778530001
+  },
+  "delegateSig": "64EZs8Y8BNM8knoondkWN1cDUqmDcryNysit8Lb5pyEh8HUm3hUFzfxkeGdnzG1YLYR8a669j5SrmbfygfcFQDXz",
+  "votes": [
+    {
+      "name": "Alice",
+      "pubkey": "J8493jn6adwjhr9zTyaaqiqYqN3LgRmra3upynTfGvcc",
+      "scoreBps": 8949,
+      "sig": "3Dh1ukjbQFxKMtrMXUxbnVuEdcw6mCTrQsu2tLupq34Bbd5TSiBrfKhKtoVQdwnATeASwy8ziNfhWeRFYdoe9RNH",
+      "erSig": null,
+      "sentAtMs": 1778530003552,
+      "confirmedAtMs": 1778530004523,
+      "latencyMs": 971
+    },
+    {
+      "name": "Bob",
+      "pubkey": "J67RvCmNFBpKRMbkWY6u4BuqxkKbZRafRxyG6Q1mk9QJ",
+      "scoreBps": 8949,
+      "sig": "4qnsE9q96sMHfL77efrSgwivZdnvzoZE87cprhXf41X9JnTx4tu8y2EyzMBrTHtXt3jZp3QVjzFLybCPnB8AJSuY",
+      "erSig": null,
+      "sentAtMs": 1778530003586,
+      "confirmedAtMs": 1778530005323,
+      "latencyMs": 1737
+    },
+    {
+      "name": "Carol",
+      "pubkey": "GdtExG1w2SDNxkW91gExYNzUYu5s8YmXSv5Nzco9ZNXH",
+      "scoreBps": 8949,
+      "sig": "4fbb5kgERA6wKq76rRRTN4iynhswoJxnVH8Rrp7YS7fkQPFGhKXTwsuCMdxV9fWkeaiXRsLqEZGoko18V88LURvX",
+      "erSig": null,
+      "sentAtMs": 1778530003602,
+      "confirmedAtMs": 1778530004978,
+      "latencyMs": 1376
+    }
+  ],
+  "undelegateSig": "3H8cYLhJspF2T83YyJXoTjScgQ4MZSs5aotC8BiCprJMsNSMqYayi5opAfD2gEkNBDsCFi3vZhaW9Zcv5oFXCNKc",
+  "settlement": {
+    "status": "settled_success",
+    "averageScoreBps": 8949,
+    "sig": "54hiwcMg7unfPnohmy9L8Ck9kkBosd9KjFG4vSqWHaGqgY923vo9zAc6CbyWd3KXam8ud7TAHkkoHnu6TSVDF9UQ",
+    "settledAtUnix": 1778530017
+  },
+  "durationMs": 53936,
+  "checks": [
+    {
+      "label": "Executor attestation on-chain",
+      "pass": true
+    },
+    {
+      "label": "delegate_campaign on-chain",
+      "pass": true
+    },
+    {
+      "label": "At least 2 validators responded (got 3)",
+      "pass": true
+    },
+    {
+      "label": "ER vote mirrors (0/3)",
+      "pass": true
+    },
+    {
+      "label": "undelegate_campaign on-chain",
+      "pass": true
+    },
+    {
+      "label": "Consensus threshold met",
+      "pass": true
+    },
+    {
+      "label": "Settlement on-chain",
+      "pass": true
+    }
+  ]
+}

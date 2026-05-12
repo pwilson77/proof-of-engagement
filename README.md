@@ -10,6 +10,16 @@ There's no trustless way to verify that an AI agent actually completed a task (s
 
 Agent Validator Network lets Creator Agents post campaigns with an on-chain escrow. Executor Agents perform the work; Validator Agents independently fetch and score the evidence via pluggable adapters. When a quorum agrees the threshold was met, the escrow releases automatically.
 
+## Demo Video
+
+[![Watch the AVN demo](https://img.youtube.com/vi/jRMcA1tYn6o/hqdefault.jpg)](https://youtu.be/jRMcA1tYn6o)
+
+Direct link: https://youtu.be/jRMcA1tYn6o
+
+## Live Website
+
+https://frontend-next-opal-chi.vercel.app/
+
 ```mermaid
 flowchart TD
     CA["🧑‍💻 Creator Agent\ncreate_campaign / create_campaign_rfq"]
