@@ -8,7 +8,7 @@ import {
   PROGRAM_ID,
   deserializeCampaign,
   statusLabel,
-} from "@poe/sdk";
+} from "@/lib/sdk";
 import { type Cluster, detectCluster } from "@/lib/solana-utils";
 import { sha256 } from "@noble/hashes/sha2.js";
 import CampaignsPanel, {

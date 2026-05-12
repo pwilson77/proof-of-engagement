@@ -6,7 +6,7 @@ import {
   PoeClient,
   findValidatorScorePda,
   type CampaignStatusLabel,
-} from "@poe/sdk";
+} from "@/lib/sdk";
 import { AddrLink, type Cluster, fmtBps, short } from "@/lib/solana-utils";
 import { BADGE, type ParsedCampaign } from "./CampaignsPanel";
 import CampaignModal, { type ModalCampaignRow } from "./CampaignModal";
@@ -185,7 +185,7 @@ function ValidatorCard({
         <div>
           <div className="h-1.5 bg-[#17332f] rounded-full overflow-hidden">
             <div
-              className="h-1.5 rounded-full bg-gradient-to-r from-[#08e0b0] to-[#2cf0c3]"
+              className="h-1.5 rounded-full bg-linear-to-r from-[#08e0b0] to-[#2cf0c3]"
               style={{ width: `${Math.round(avgBps / 100)}%` }}
             />
           </div>

@@ -8,7 +8,7 @@ import {
   findValidatorScorePda,
   type CampaignAccount,
   type CampaignStatusLabel,
-} from "@poe/sdk";
+} from "@/lib/sdk";
 import {
   AddrLink,
   type Cluster,
@@ -191,10 +191,10 @@ function CampaignRow({
         className="w-full flex items-center gap-2.5 px-3 py-2 text-left cursor-pointer flex-wrap"
         onClick={() => setOpen(true)}
       >
-        <span className="font-mono text-sm font-bold text-[#23f0c2] min-w-[5rem]">
+        <span className="font-mono text-sm font-bold text-[#23f0c2] min-w-20">
           #{String(campaignId)}
         </span>
-        <div className="flex-1 min-w-[14rem]">
+        <div className="flex-1 min-w-56">
           <p className="truncate text-sm font-semibold text-[#d6f2ea]">
             {campaignTitle}
           </p>
@@ -427,7 +427,7 @@ function CampaignRow({
                             }}
                           />
                         </div>
-                        <span className="text-xs font-bold min-w-[2.75rem] text-right text-[#e5faf4]">
+                        <span className="text-xs font-bold min-w-11 text-right text-[#e5faf4]">
                           {fmtBps(s.scoreBps)}
                         </span>
                         <span

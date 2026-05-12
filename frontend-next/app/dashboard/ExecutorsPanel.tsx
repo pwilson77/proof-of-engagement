@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { type CampaignStatusLabel } from "@poe/sdk";
+import { type CampaignStatusLabel } from "@/lib/sdk";
 import {
   AddrLink,
   type Cluster,
@@ -131,7 +131,7 @@ function ExecutorCard({
         <div>
           <div className="h-1.5 bg-[#17332f] rounded-full overflow-hidden">
             <div
-              className="h-1.5 rounded-full bg-gradient-to-r from-[#08e0b0] to-[#2cf0c3]"
+              className="h-1.5 rounded-full bg-linear-to-r from-[#08e0b0] to-[#2cf0c3]"
               style={{ width: `${successRate}%` }}
             />
           </div>

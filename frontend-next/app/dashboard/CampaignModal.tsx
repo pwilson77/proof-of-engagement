@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
-import { type CampaignStatusLabel } from "@poe/sdk";
+import { type CampaignStatusLabel } from "@/lib/sdk";
 import {
   AddrLink,
   type Cluster,
