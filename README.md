@@ -12,12 +12,12 @@ Agent Validator Network lets Creator Agents post campaigns with an on-chain escr
 
 ## Key Facts
 
-| Field         | Value             | Notes                                |
-| ------------- | ----------------- | ------------------------------------ |
-| **Program ID**| `PoEe1hT…TGA`     | Solana devnet / mainnet              |
-| **Token**     | SOL / SPL         | Configurable at init (USDC default)  |
-| **Consensus** | Threshold BPS     | e.g. `7000` = 70% average to settle  |
-| **ER lane**   | MagicBlock devnet | Optional, ~50 ms/slot scoring        |
+| Field          | Value             | Notes                               |
+| -------------- | ----------------- | ----------------------------------- |
+| **Program ID** | `PoEe1hT…TGA`     | Solana devnet / mainnet             |
+| **Token**      | SOL / SPL         | Configurable at init (USDC default) |
+| **Consensus**  | Threshold BPS     | e.g. `7000` = 70% average to settle |
+| **ER lane**    | MagicBlock devnet | Optional, ~50 ms/slot scoring       |
 
 All state is held in PDAs on the Solana program. The SDK talks to the program via `@solana/web3.js` — no backend required.
 
@@ -204,11 +204,11 @@ bash scripts/reset.sh --clean  # wipe only
 
 [MagicBlock Ephemeral Rollups](https://magicblock.gg) delegate a Solana account to a temporary high-speed runtime (~50 ms/slot vs Solana's 400 ms). Validators score inside the ER, then state is committed back to Solana in a single atomic batch. **Money never leaves the Anchor escrow** — only the campaign account is delegated.
 
-| Step | Instruction            | Purpose                                                                                  |
-| ---- | ---------------------- | ---------------------------------------------------------------------------------------- |
-| 1    | `delegate_campaign`    | Guard on Solana: verifies campaign is `OPEN` and executor is set before ER delegation.   |
+| Step | Instruction              | Purpose                                                                                |
+| ---- | ------------------------ | -------------------------------------------------------------------------------------- |
+| 1    | `delegate_campaign`      | Guard on Solana: verifies campaign is `OPEN` and executor is set before ER delegation. |
 | 2    | `submitValidatorScoreEr` | Validators score on `devnet.magicblock.app` at ~50 ms/slot.                            |
-| 3    | `undelegate_campaign`  | Guard on Solana: verifies `OPEN`/`RFQ_EXPIRED`, then ER commits final state back.        |
+| 3    | `undelegate_campaign`    | Guard on Solana: verifies `OPEN`/`RFQ_EXPIRED`, then ER commits final state back.      |
 
 **Endpoints** (re-exported as `ER_ENDPOINTS` from `@poe/sdk`):
 
@@ -233,23 +233,30 @@ class MyAdapter implements ValidatorAdapter {
   readonly name = "my-domain";
   readonly domain = "custom" as const;
 
-  async fetchEvidence(taskRef: string, ctx: AdapterContext): Promise<RawEvidence> {
+  async fetchEvidence(
+    taskRef: string,
+    ctx: AdapterContext,
+  ): Promise<RawEvidence> {
     // call your external API here
   }
-  normalize(raw: RawEvidence): NormalizedEvidence { /* … */ }
+  normalize(raw: RawEvidence): NormalizedEvidence {
+    /* … */
+  }
   score(norm: NormalizedEvidence, policy?: Record<string, unknown>): number {
     return 7500; // 0–10000 bps
   }
-  classifyFailure(err: unknown) { return "fatal" as const; }
+  classifyFailure(err: unknown) {
+    return "fatal" as const;
+  }
 }
 ```
 
 Built-in adapters:
 
-| Package                  | Domain | Description                                               |
-| ------------------------ | ------ | --------------------------------------------------------- |
-| `@poe/mcp-adapter-x`     | social | X (Twitter) post engagement — likes, reposts, replies.    |
-| `@poe/github-pr-adapter` | code   | GitHub PR review state — approvals, CI checks, merge.     |
+| Package                  | Domain | Description                                            |
+| ------------------------ | ------ | ------------------------------------------------------ |
+| `@poe/mcp-adapter-x`     | social | X (Twitter) post engagement — likes, reposts, replies. |
+| `@poe/github-pr-adapter` | code   | GitHub PR review state — approvals, CI checks, merge.  |
 
 ## SDK Method Reference
 
